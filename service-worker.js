@@ -1,5 +1,5 @@
-const CACHE="nous-deux-v10";
-const ASSETS=["./","./index.html","./app.css?v=10","./app.js?v=10","./manifest.json","./config.js"];
+const CACHE="nous-deux-v11";
+const ASSETS=["./","./index.html","./app.css?v=11","./app.js?v=11","./manifest.json","./config.js"];
 
 self.addEventListener("install",event=>{
   self.skipWaiting();
