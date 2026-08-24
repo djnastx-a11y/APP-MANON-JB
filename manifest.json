@@ -1,10 +1,24 @@
 {
   "name": "Nous Deux",
   "short_name": "Nous Deux",
-  "start_url": "./index.html",
+  "id": "/APP-MANON-JB/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f4f4f2",
-  "theme_color": "#111111",
-  "description": "Application privée pour organiser le quotidien à deux.",
-  "icons": []
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "orientation": "portrait-primary",
+  "background_color": "#05080d",
+  "theme_color": "#05080d",
+  "description": "Application privée de JB et Manon pour organiser leur quotidien à deux.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
