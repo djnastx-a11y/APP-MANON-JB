@@ -38,7 +38,7 @@ function setSyncStatus(text,error=false){
 function buildAuthGate(){
   if(document.getElementById("authGate"))return;
   const style=document.createElement("style");
-  style.textContent="#authGate{position:fixed;inset:0;z-index:9999;background:linear-gradient(145deg,#eef2ff,#fff7ed 48%,#ecfeff);display:grid;place-items:center;padding:22px;font-family:system-ui}#authCard{width:min(430px,100%);background:#fff;border:1px solid #ffffffcc;border-radius:28px;padding:26px;box-shadow:0 24px 70px #312e8130}#authCard h2{margin:0 0 8px;font-size:28px;color:#172554}#authCard p{color:#64748b;line-height:1.45}#authCard label{display:block;margin:14px 0 6px;font-weight:700;color:#334155}#authCard input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:14px;padding:13px;font-size:16px}#authSubmit{width:100%;margin-top:18px;border:0;border-radius:14px;padding:14px;background:linear-gradient(135deg,#4f46e5,#06b6d4);color:white;font-size:16px;font-weight:800}#authToggle{width:100%;margin-top:10px;border:0;background:transparent;color:#4f46e5;font-weight:750;padding:9px}#authMessage{min-height:22px;color:#be123c!important;font-weight:650}#authNameWrap{display:none}";
+  style.textContent="#authGate{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at 50% 25%,#082f6e,#020817 55%,#01040b);display:grid;place-items:center;padding:22px;font-family:system-ui}#authCard{width:min(430px,100%);background:#07111f;border:1px solid #123565;border-radius:26px;padding:26px;box-shadow:0 24px 80px #0066ff35;color:#f8fbff}#authCard h2{margin:0 0 8px;font-size:32px;color:#fff}#authCard p{color:#8fa7c7;line-height:1.45}#authCard label{display:block;margin:14px 0 6px;font-weight:700;color:#c7d8ef}#authCard input{width:100%;box-sizing:border-box;border:1px solid #1a3f70;border-radius:13px;padding:13px;font-size:16px;background:#020817;color:#fff}#authSubmit{width:100%;margin-top:18px;border:0;border-radius:13px;padding:14px;background:linear-gradient(135deg,#006eff,#00c8ff);color:#fff;font-size:16px;font-weight:800}#authToggle{width:100%;margin-top:10px;border:0;background:transparent;color:#38cfff;font-weight:750;padding:9px}#authMessage{min-height:22px;color:#ff7a70!important;font-weight:650}#authNameWrap{display:none}";
   document.head.appendChild(style);
   const gate=document.createElement("div");
   gate.id="authGate";
@@ -163,7 +163,7 @@ const esc=s=>(s??"").toString().replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;","
 function setScreen(name){
   $$(".screen").forEach(x=>x.classList.toggle("active",x.dataset.screen===name));
   $$(".nav-item").forEach(x=>x.classList.toggle("active",x.dataset.screenTarget===name));
-  $("#pageTitle").textContent={home:"Accueil",us:"Nous",lists:"Listes",planning:"Planning"}[name]||"Maison";
+  $("#pageTitle").textContent={home:"Accueil",us:"Nous",lists:"Listes",planning:"Planning",house:"Maison"}[name]||"Nous Deux";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 $$("[data-screen-target]").forEach(b=>b.onclick=()=>setScreen(b.dataset.screenTarget));
@@ -190,7 +190,7 @@ function renderShopping(){
   <div class="item ${i.done?"done":""}">
     <input class="check" type="checkbox" ${i.done?"checked":""} onchange="toggleItem('shopping',${i.id})">
     <div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(i.store||"Courses")}</div></div>
-    <button class="ghost" onclick="removeItem('shopping',${i.id})">Suppr.</button>
+    <div class="item-actions"><button class="item-action" aria-label="Modifier" onclick="editItem('shopping',${i.id})">✎</button><button class="item-action delete" aria-label="Supprimer" onclick="removeItem('shopping',${i.id})">⌫</button></div>
   </div>`).join(""):`<div class="empty card">Aucune course.</div>`;
 }
 function renderTasks(){
@@ -198,29 +198,55 @@ function renderTasks(){
   <div class="item ${i.done?"done":""}">
     <input class="check" type="checkbox" ${i.done?"checked":""} onchange="toggleItem('tasks',${i.id})">
     <div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(i.owner||"Nous deux")}</div></div>
-    <span class="badge ${i.priority==="urgent"?"urgent":""}">${esc(i.priority||"normal")}</span>
+    <span class="badge ${i.priority==="urgent"?"urgent":""}">${esc(i.priority||"normal")}</span><div class="item-actions"><button class="item-action" aria-label="Modifier" onclick="editItem('tasks',${i.id})">✎</button><button class="item-action delete" aria-label="Supprimer" onclick="removeItem('tasks',${i.id})">⌫</button></div>
   </div>`).join(""):`<div class="empty card">Aucune tâche.</div>`;
 }
+
+let calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+let selectedCalendarDate=new Date().toISOString().slice(0,10);
+const calendarKey=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+window.selectCalendarDate=key=>{selectedCalendarDate=key;renderCalendar();renderEvents()};
+window.changeCalendarMonth=delta=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+delta,1);renderCalendar()};
+function renderCalendar(){
+  const grid=$("#calendarGrid");
+  if(!grid)return;
+  $("#calendarMonth").textContent=calendarCursor.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+  const first=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth(),1);
+  const start=(first.getDay()+6)%7;
+  const cursor=new Date(first);cursor.setDate(cursor.getDate()-start);
+  const today=new Date().toISOString().slice(0,10);
+  const days=[];
+  for(let n=0;n<42;n++){
+    const d=new Date(cursor);d.setDate(cursor.getDate()+n);
+    const key=calendarKey(d);
+    const count=state.events.filter(e=>e.date===key).length;
+    days.push('<button class="calendar-day '+(d.getMonth()!==calendarCursor.getMonth()?'outside ':'')+(key===today?'today ':'')+(key===selectedCalendarDate?'selected':'')+'" onclick="selectCalendarDate(\''+key+'\')"><span>'+d.getDate()+'</span>'+(count?'<i>'+Array(Math.min(count,3)).fill('•').join('')+'</i>':'')+'</button>');
+  }
+  grid.innerHTML=days.join("");
+}
+
 function renderEvents(){
-  const events=[...state.events].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const all=[...state.events].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const events=all.filter(e=>e.date===selectedCalendarDate);
+  const title=$("#selectedDateTitle");if(title)title.textContent=new Date(selectedCalendarDate+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
   $("#eventList").innerHTML=events.length?events.map(i=>`
-  <div class="item"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(i.date)} ${esc(i.time||"")}</div></div><button class="ghost" onclick="removeItem('events',${i.id})">Suppr.</button></div>`).join(""):`<div class="empty card">Aucun événement.</div>`;
+  <div class="item"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(i.date)} ${esc(i.time||"")}</div></div><div class="item-actions"><button class="item-action" aria-label="Modifier" onclick="editItem('events',${i.id})">✎</button><button class="item-action delete" aria-label="Supprimer" onclick="removeItem('events',${i.id})">⌫</button></div></div>`).join(""):`<div class="empty card">Aucun événement.</div>`;
 }
 function renderHome(){
   $("#homeList").innerHTML=state.home.length?state.home.map(i=>`
   <div class="item ${i.done?"done":""}">
     <input class="check" type="checkbox" ${i.done?"checked":""} onchange="toggleItem('home',${i.id})">
     <div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(i.category||"Maison")}</div></div>
-    <span class="badge">${esc(i.priority||"normal")}</span>
+    <span class="badge">${esc(i.priority||"normal")}</span><div class="item-actions"><button class="item-action" aria-label="Modifier" onclick="editItem('home',${i.id})">✎</button><button class="item-action delete" aria-label="Supprimer" onclick="removeItem('home',${i.id})">⌫</button></div>
   </div>`).join(""):`<div class="empty card">Aucun sujet maison.</div>`;
 }
 function renderNotes(){
   $("#notesList").innerHTML=state.notes.length?state.notes.map(i=>`
-  <div class="item"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(i.text||"")}</div></div><button class="ghost" onclick="removeItem('notes',${i.id})">Suppr.</button></div>`).join(""):`<div class="empty card">Aucune note.</div>`;
+  <div class="item"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${esc(i.text||"")}</div></div><div class="item-actions"><button class="item-action" aria-label="Modifier" onclick="editItem('notes',${i.id})">✎</button><button class="item-action delete" aria-label="Supprimer" onclick="removeItem('notes',${i.id})">⌫</button></div></div>`).join(""):`<div class="empty card">Aucune note.</div>`;
 }
 function renderBuys(){
   $("#buyList").innerHTML=state.buys.length?state.buys.map(i=>`
-  <div class="item"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${i.price?esc(i.price)+" €":"Prix à comparer"}</div></div><span class="badge">${esc(i.priority||"normal")}</span></div>`).join(""):`<div class="empty card">Aucun achat prévu.</div>`;
+  <div class="item"><div class="grow"><div class="title">${esc(i.title)}</div><div class="meta">${i.price?esc(i.price)+" €":"Prix à comparer"}</div></div><span class="badge">${esc(i.priority||"normal")}</span><div class="item-actions"><button class="item-action" aria-label="Modifier" onclick="editItem('buys',${i.id})">✎</button><button class="item-action delete" aria-label="Supprimer" onclick="removeItem('buys',${i.id})">⌫</button></div></div>`).join(""):`<div class="empty card">Aucun achat prévu.</div>`;
 }
 function renderChat(){
   const list=$("#chatList");
@@ -233,16 +259,16 @@ function renderHomeSummary(){
   const upcoming=state.events.filter(e=>new Date(e.date+"T"+(e.time||"00:00"))>=new Date()).length;
   const home=state.home.filter(x=>!x.done).length;
   $("#urgentCount").textContent=urgent;$("#shoppingCount").textContent=shopping;$("#eventCount").textContent=upcoming;$("#homeCount").textContent=home;
-  const d=new Date();$("#todayLabel").textContent=d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  const d=new Date();$("#todayLabel").textContent=d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});if($("#heroWeekday"))$("#heroWeekday").textContent=d.toLocaleDateString("fr-FR",{weekday:"long"});if($("#heroDay"))$("#heroDay").textContent=d.getDate();if($("#heroMonth"))$("#heroMonth").textContent=d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
   $("#helloText").textContent="Bonjour "+currentDisplayName;
   const feed=[];
   state.tasks.filter(x=>!x.done).slice(0,3).forEach(x=>feed.push(`<div class="item"><div class="grow"><div class="title">${esc(x.title)}</div><div class="meta">Tâche · ${esc(x.owner||"Nous deux")}</div></div><span class="badge ${x.priority==="urgent"?"urgent":""}">${esc(x.priority)}</span></div>`));
   state.events.slice(0,2).forEach(x=>feed.push(`<div class="item"><div class="grow"><div class="title">${esc(x.title)}</div><div class="meta">Planning · ${esc(x.date)} ${esc(x.time||"")}</div></div></div>`));
   $("#todayFeed").innerHTML=feed.length?feed.join(""):`<div class="empty card">Rien d'urgent pour le moment.</div>`;
 }
-function renderAll(){renderShopping();renderTasks();renderEvents();renderHome();renderNotes();renderBuys();renderChat();renderHomeSummary()}
+function renderAll(){renderShopping();renderTasks();renderCalendar();renderEvents();renderHome();renderNotes();renderBuys();renderChat();renderHomeSummary()}
 window.toggleItem=(type,id)=>{const i=state[type].find(x=>x.id===id);if(i){i.done=!i.done;save()}};
-window.removeItem=(type,id)=>{state[type]=state[type].filter(x=>x.id!==id);save()};
+window.removeItem=(type,id)=>{if(!confirm("Supprimer cet élément ?"))return;state[type]=state[type].filter(x=>String(x.id)!==String(id));save()};
 
 $("#addShoppingBtn").onclick=()=>{const v=$("#shoppingInput").value.trim();if(!v)return;state.shopping.unshift({id:uid(),title:v,done:false,store:"Courses"});$("#shoppingInput").value="";save()};
 $("#shoppingInput").addEventListener("keydown",e=>{if(e.key==="Enter"){$("#addShoppingBtn").click()}});
@@ -250,31 +276,51 @@ $("#chatForm").onsubmit=e=>{e.preventDefault();const v=$("#chatInput").value.tri
 
 const modal=$("#modal"), modalTitle=$("#modalTitle"), modalBody=$("#modalBody");
 let modalType=null;
-function openForm(type){
+let editingId=null;
+const collectionFor={task:"tasks",event:"events",home:"home",note:"notes",buy:"buys",shopping:"shopping"};
+function openForm(type,item=null){
   modalType=type;
+  editingId=item?.id??null;
   const forms={
-    task:["Nouvelle tâche",`<div class="field"><label>Tâche</label><input name="title" required></div><div class="field"><label>Responsable</label><select name="owner"><option>NASTX</option><option>Manon</option><option>Nous deux</option></select></div><div class="field"><label>Priorité</label><select name="priority"><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select></div>`],
-    event:["Nouvel événement",`<div class="field"><label>Titre</label><input name="title" required></div><div class="field"><label>Date</label><input name="date" type="date" required></div><div class="field"><label>Heure</label><input name="time" type="time"></div>`],
-    home:["Maison",`<div class="field"><label>Problème ou projet</label><input name="title" required></div><div class="field"><label>Catégorie</label><input name="category" placeholder="Plomberie, terrasse, jardin..."></div><div class="field"><label>Priorité</label><select name="priority"><option>normal</option><option>important</option><option>urgent</option></select></div>`],
-    note:["Nouvelle note",`<div class="field"><label>Titre</label><input name="title" required></div><div class="field"><label>Note</label><textarea name="text" rows="5"></textarea></div>`],
-    buy:["Achat à prévoir",`<div class="field"><label>Article</label><input name="title" required></div><div class="field"><label>Prix estimé</label><input name="price" inputmode="decimal"></div><div class="field"><label>Priorité</label><select name="priority"><option>normal</option><option>important</option><option>urgent</option></select></div>`],
-    shopping:["Ajouter une course",`<div class="field"><label>Article</label><input name="title" required></div><div class="field"><label>Magasin ou catégorie</label><input name="store" value="Courses"></div>`]
+    task:["Tâche",'<div class="field"><label>Tâche</label><input name="title" required></div><div class="field"><label>Responsable</label><select name="owner"><option>NASTX</option><option>Manon</option><option>Nous deux</option></select></div><div class="field"><label>Priorité</label><select name="priority"><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select></div>'],
+    event:["Événement",'<div class="field"><label>Titre</label><input name="title" required></div><div class="field"><label>Date</label><input name="date" type="date" required></div><div class="field"><label>Heure</label><input name="time" type="time"></div>'],
+    home:["Maison",'<div class="field"><label>Problème ou projet</label><input name="title" required></div><div class="field"><label>Catégorie</label><input name="category" placeholder="Plomberie, terrasse, jardin..."></div><div class="field"><label>Priorité</label><select name="priority"><option>normal</option><option>important</option><option>urgent</option></select></div>'],
+    note:["Note",'<div class="field"><label>Titre</label><input name="title" required></div><div class="field"><label>Note</label><textarea name="text" rows="5"></textarea></div>'],
+    buy:["Achat à prévoir",'<div class="field"><label>Article</label><input name="title" required></div><div class="field"><label>Prix estimé</label><input name="price" inputmode="decimal"></div><div class="field"><label>Priorité</label><select name="priority"><option>normal</option><option>important</option><option>urgent</option></select></div>'],
+    shopping:["Course",'<div class="field"><label>Article</label><input name="title" required></div><div class="field"><label>Magasin ou catégorie</label><input name="store" value="Courses"></div>']
   };
-  modalTitle.textContent=forms[type][0];modalBody.innerHTML=forms[type][1];modal.showModal();
+  modalTitle.textContent=(item?"Modifier ":"Ajouter ")+forms[type][0].toLowerCase();
+  modalBody.innerHTML=forms[type][1];
+  if(item)Object.entries(item).forEach(([key,value])=>{const field=modalBody.querySelector('[name="'+key+'"]');if(field)field.value=value??""});
+  modal.showModal();
 }
+window.editItem=(type,id)=>{
+  const singular={tasks:"task",events:"event",home:"home",notes:"note",buys:"buy",shopping:"shopping"}[type];
+  const item=state[type].find(x=>String(x.id)===String(id));
+  if(item)openForm(singular,item);
+};
 $("#modalForm").addEventListener("submit",e=>{
-  if(e.submitter?.value==="cancel")return;
+  if(e.submitter?.value==="cancel"){editingId=null;return}
   e.preventDefault();
   const fd=Object.fromEntries(new FormData(e.currentTarget).entries());
   if(!fd.title?.trim())return;
-  if(modalType==="task")state.tasks.unshift({id:uid(),title:fd.title,owner:fd.owner,priority:fd.priority,done:false});
-  if(modalType==="event")state.events.unshift({id:uid(),title:fd.title,date:fd.date,time:fd.time});
-  if(modalType==="home")state.home.unshift({id:uid(),title:fd.title,category:fd.category||"Maison",priority:fd.priority,done:false});
-  if(modalType==="note")state.notes.unshift({id:uid(),title:fd.title,text:fd.text});
-  if(modalType==="buy")state.buys.unshift({id:uid(),title:fd.title,price:fd.price,priority:fd.priority});
-  if(modalType==="shopping")state.shopping.unshift({id:uid(),title:fd.title,store:fd.store||"Courses",done:false});
-  modal.close();save();
+  const key=collectionFor[modalType];
+  const base={title:fd.title.trim()};
+  if(modalType==="task")Object.assign(base,{owner:fd.owner,priority:fd.priority,done:false});
+  if(modalType==="event")Object.assign(base,{date:fd.date,time:fd.time});
+  if(modalType==="home")Object.assign(base,{category:fd.category||"Maison",priority:fd.priority,done:false});
+  if(modalType==="note")Object.assign(base,{text:fd.text});
+  if(modalType==="buy")Object.assign(base,{price:fd.price,priority:fd.priority});
+  if(modalType==="shopping")Object.assign(base,{store:fd.store||"Courses",done:false});
+  if(editingId!==null){
+    const existing=state[key].find(x=>String(x.id)===String(editingId));
+    if(existing)Object.assign(existing,base);
+  }else state[key].unshift({id:uid(),...base});
+  editingId=null;
+  modal.close();
+  save();
 });
+
 $$("[data-action]").forEach(b=>b.addEventListener("click",()=>{
   const a=b.dataset.action;
   if(a==="open-add")$("#quickAddModal").showModal();
