@@ -36,40 +36,19 @@ function setSyncStatus(text,error=false){
 function buildAuthGate(){
   if(document.getElementById("authGate"))return;
   const style=document.createElement("style");
-  style.textContent="#authGate{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at 50% 25%,#082f6e,#020817 55%,#01040b);display:grid;place-items:center;padding:22px;font-family:system-ui}#authCard{width:min(430px,100%);background:#07111f;border:1px solid #123565;border-radius:26px;padding:26px;box-shadow:0 24px 80px #0066ff35;color:#f8fbff}#authCard h2{margin:0 0 8px;font-size:32px;color:#fff}#authCard p{color:#8fa7c7;line-height:1.45}#authCard label{display:block;margin:14px 0 6px;font-weight:700;color:#c7d8ef}#authCard input{width:100%;box-sizing:border-box;border:1px solid #1a3f70;border-radius:13px;padding:13px;font-size:16px;background:#020817;color:#fff}#authSubmit{width:100%;margin-top:18px;border:0;border-radius:13px;padding:14px;background:linear-gradient(135deg,#006eff,#00c8ff);color:#fff;font-size:16px;font-weight:800}#authToggle{width:100%;margin-top:10px;border:0;background:transparent;color:#38cfff;font-weight:750;padding:9px}#authMessage{min-height:22px;color:#ff7a70!important;font-weight:650}#authNameWrap{display:none}";
+  style.textContent="#authGate{position:fixed;inset:0;z-index:9999;background:#05080d;display:grid;place-items:center;padding:22px;font-family:system-ui}#authCard{width:min(430px,100%);background:#0d141e;border:1px solid #1d2938;border-radius:24px;padding:26px;box-shadow:0 24px 80px #0008;color:#f8fbff}#authCard h2{margin:0 0 8px;font-size:30px;color:#fff}#authCard p{color:#8fa0b5;line-height:1.45}#authCard label{display:block;margin:14px 0 6px;font-weight:700;color:#c7d8ef}#authCard input{width:100%;box-sizing:border-box;border:1px solid #26384e;border-radius:13px;padding:13px;font-size:16px;background:#070c13;color:#fff}#authSubmit{width:100%;margin-top:18px;border:0;border-radius:13px;padding:14px;background:#2377ee;color:#fff;font-size:16px;font-weight:800}#authMessage{min-height:22px;color:#ff8ca8!important;font-weight:650}.private-access{font-size:12px;text-align:center;margin:16px 0 0!important;color:#718299!important}";
   document.head.appendChild(style);
-  const gate=document.createElement("div");
-  gate.id="authGate";
-  gate.innerHTML='<div id="authCard"><div style="font-size:34px">💫</div><h2>Nous Deux</h2><p id="authIntro">Connectez-vous pour retrouver vos listes et messages sur vos deux téléphones.</p><form id="authForm"><div id="authNameWrap"><label for="authName">Votre prénom</label><input id="authName" autocomplete="name" placeholder="Jean-Baptiste ou Manon"></div><label for="authEmail">Adresse e-mail</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Mot de passe</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p id="authMessage"></p><button id="authSubmit" type="submit">Se connecter</button><button id="authToggle" type="button">Créer mon compte</button></form></div>';
+  const gate=document.createElement("div");gate.id="authGate";
+  gate.innerHTML='<div id="authCard"><div style="font-size:30px;color:#70baff">♡</div><h2>Nous Deux</h2><p>Connectez-vous pour retrouver votre espace partagé sur vos deux téléphones.</p><form id="authForm"><label for="authEmail">Adresse e-mail</label><input id="authEmail" type="email" autocomplete="email" required><label for="authPassword">Mot de passe</label><input id="authPassword" type="password" autocomplete="current-password" minlength="6" required><p id="authMessage"></p><button id="authSubmit" type="submit">Se connecter</button></form><p class="private-access">Accès privé réservé à JB et Manon</p></div>';
   document.body.appendChild(gate);
-  let signup=false;
-  const toggle=gate.querySelector("#authToggle");
   const submit=gate.querySelector("#authSubmit");
-  const nameWrap=gate.querySelector("#authNameWrap");
-  toggle.onclick=()=>{
-    signup=!signup;
-    nameWrap.style.display=signup?"block":"none";
-    submit.textContent=signup?"Créer mon compte":"Se connecter";
-    toggle.textContent=signup?"J’ai déjà un compte":"Créer mon compte";
-    gate.querySelector("#authPassword").autocomplete=signup?"new-password":"current-password";
-    gate.querySelector("#authMessage").textContent="";
-  };
   gate.querySelector("#authForm").onsubmit=async e=>{
-    e.preventDefault();
-    const msg=gate.querySelector("#authMessage");
-    const email=gate.querySelector("#authEmail").value.trim();
-    const password=gate.querySelector("#authPassword").value;
-    const displayName=gate.querySelector("#authName").value.trim()||email.split("@")[0];
-    submit.disabled=true;
-    submit.textContent=signup?"Création…":"Connexion…";
-    const result=signup
-      ? await supabaseClient.auth.signUp({email,password,options:{data:{display_name:displayName},emailRedirectTo:location.origin+location.pathname}})
-      : await supabaseClient.auth.signInWithPassword({email,password});
-    submit.disabled=false;
-    submit.textContent=signup?"Créer mon compte":"Se connecter";
-    if(result.error){msg.textContent=result.error.message;return}
-    if(result.data.session){await activateSession(result.data.user)}
-    else msg.textContent="Compte créé. Ouvrez l’e-mail Supabase pour confirmer, puis revenez vous connecter.";
+    e.preventDefault();const msg=gate.querySelector("#authMessage");const email=gate.querySelector("#authEmail").value.trim();const password=gate.querySelector("#authPassword").value;
+    submit.disabled=true;submit.textContent="Connexion…";msg.textContent="";
+    const result=await supabaseClient.auth.signInWithPassword({email,password});
+    submit.disabled=false;submit.textContent="Se connecter";
+    if(result.error){msg.textContent="Adresse e-mail ou mot de passe incorrect.";return}
+    if(result.data.session)await activateSession(result.data.user);
   };
 }
 function hideAuthGate(){
@@ -161,6 +140,7 @@ function base64UrlToBytes(value){
 function paintNotificationState(button,enabled,available=true){
   if(button){button.classList.toggle("enabled",enabled);button.title=available?(enabled?"Notifications activées":"Activer les notifications"):"Notifications non disponibles";button.setAttribute("aria-label",button.title)}
   const status=document.getElementById("settingsNotificationStatus");if(status)status.textContent=!available?"Non disponibles sur ce navigateur":enabled?"Activées sur ce téléphone":"À activer sur ce téléphone";
+  const nudge=document.getElementById("notificationNudge");if(nudge)nudge.hidden=enabled;
 }
 async function setupNotificationButton(){
   const button=document.getElementById("notificationBtn");if(!button)return;button.onclick=enableNotifications;
@@ -444,6 +424,7 @@ $$("[data-action]").forEach(b=>b.addEventListener("click",()=>{
 $("[data-close-quick]").onclick=()=>$("#quickAddModal").close();
 $("[data-close-settings]").onclick=()=>$("#settingsModal").close();
 $("#settingsNotificationBtn").onclick=enableNotifications;
+$("#nudgeNotificationBtn").onclick=enableNotifications;
 $("#signOutBtn").onclick=async()=>{if(confirm("Se déconnecter de Nous Deux ?")){$("#settingsModal").close();await supabaseClient?.auth.signOut()}};
 document.addEventListener("click",e=>{if(e.target.closest("button")&&navigator.vibrate)navigator.vibrate(8)},{passive:true});
 $$("[data-quick]").forEach(b=>b.onclick=()=>{const q=$("#quickAddModal");if(q.open)q.close();openForm(b.dataset.quick)});
