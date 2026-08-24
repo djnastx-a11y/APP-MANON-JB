@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Nous Deux</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">NOTRE QUOTIDIEN</div>
+        <h1 id="pageTitle">Accueil</h1>
+      </div>
+      <button class="profile-btn" id="profileBtn" aria-label="Profil">N</button>
+    </header>
+
+    <main id="app">
+      <section class="screen active" data-screen="home">
+        <div class="hero card">
+          <div>
+            <div class="muted" id="todayLabel"></div>
+            <h2 id="helloText">Bonjour</h2>
+            <p id="summaryText">Tout ce qui compte aujourd'hui, au même endroit.</p>
+          </div>
+          <button class="primary" data-action="open-add">+ Ajouter</button>
+        </div>
+
+        <div class="stats-grid">
+          <button class="stat card" data-jump="tasks"><span id="urgentCount">0</span><small>Urgences</small></button>
+          <button class="stat card" data-jump="lists"><span id="shoppingCount">0</span><small>Courses</small></button>
+          <button class="stat card" data-jump="planning"><span id="eventCount">0</span><small>À venir</small></button>
+          <button class="stat card" data-jump="home"><span id="homeCount">0</span><small>Maison</small></button>
+        </div>
+
+        <div class="section-head"><h3>Aujourd'hui</h3><button class="ghost" data-jump="planning">Voir tout</button></div>
+        <div id="todayFeed" class="stack"></div>
+
+        <div class="section-head"><h3>Accès rapides</h3></div>
+        <div class="quick-grid">
+          <button class="quick" data-jump="lists">🛒<span>Courses</span></button>
+          <button class="quick" data-jump="tasks">✅<span>Tâches</span></button>
+          <button class="quick" data-jump="planning">📅<span>Planning</span></button>
+          <button class="quick" data-jump="home">🏠<span>Maison</span></button>
+          <button class="quick" data-action="camera">📷<span>Caméra</span></button>
+          <button class="quick" data-action="budget">💳<span>Budget</span></button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="us">
+        <div class="tabs">
+          <button class="tab active" data-us-tab="chat">Discussion</button>
+          <button class="tab" data-us-tab="notes">Notes</button>
+          <button class="tab" data-us-tab="memories">Souvenirs</button>
+        </div>
+
+        <div id="chatPanel">
+          <div class="chat card" id="chatList"></div>
+          <form class="composer" id="chatForm">
+            <input id="chatInput" placeholder="Écrire à Manon..." autocomplete="off" />
+            <button class="primary" type="submit">Envoyer</button>
+          </form>
+        </div>
+
+        <div id="notesPanel" class="hidden">
+          <div class="section-head"><h3>Notes communes</h3><button class="primary small" data-action="add-note">+ Note</button></div>
+          <div id="notesList" class="stack"></div>
+        </div>
+
+        <div id="memoriesPanel" class="hidden">
+          <div class="empty card">Les souvenirs pourront regrouper photos, voyages, restaurants et moments importants.</div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="lists">
+        <div class="tabs">
+          <button class="tab active" data-list-tab="shopping">Courses</button>
+          <button class="tab" data-list-tab="tasks">Tâches</button>
+          <button class="tab" data-list-tab="buys">À acheter</button>
+        </div>
+
+        <div id="shoppingPanel">
+          <div class="toolbar">
+            <input id="shoppingInput" placeholder="Ajouter un article..." />
+            <button class="primary" id="addShoppingBtn">Ajouter</button>
+          </div>
+          <div id="shoppingList" class="stack"></div>
+        </div>
+
+        <div id="tasksPanel" class="hidden">
+          <div class="section-head"><h3>Tâches</h3><button class="primary small" data-action="add-task">+ Tâche</button></div>
+          <div id="taskList" class="stack"></div>
+        </div>
+
+        <div id="buysPanel" class="hidden">
+          <div class="section-head"><h3>Achats à prévoir</h3><button class="primary small" data-action="add-buy">+ Achat</button></div>
+          <div id="buyList" class="stack"></div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="planning">
+        <div class="section-head"><h3>Planning commun</h3><button class="primary small" data-action="add-event">+ Événement</button></div>
+        <div id="eventList" class="stack"></div>
+      </section>
+
+      <section class="screen" data-screen="home">
+        <div class="camera card">
+          <div>
+            <div class="eyebrow">EZVIZ H8C</div>
+            <h3>Caméra maison</h3>
+            <p class="muted">Le module est prêt à être connecté à votre compte EZVIZ.</p>
+          </div>
+          <button class="primary" data-action="camera">Configurer</button>
+        </div>
+
+        <div class="section-head"><h3>Maison</h3><button class="primary small" data-action="add-home">+ Ajouter</button></div>
+        <div id="homeList" class="stack"></div>
+
+        <div class="section-head"><h3>Sections</h3></div>
+        <div class="quick-grid">
+          <button class="quick" data-action="documents">📄<span>Documents</span></button>
+          <button class="quick" data-action="pets">🐶<span>Animaux</span></button>
+          <button class="quick" data-action="car">🚗<span>Voiture</span></button>
+          <button class="quick" data-action="inventory">📦<span>Inventaire</span></button>
+          <button class="quick" data-action="budget">💳<span>Budget</span></button>
+          <button class="quick" data-action="where">🔎<span>Où est rangé ?</span></button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-screen-target="home">⌂<span>Accueil</span></button>
+      <button class="nav-item" data-screen-target="us">💬<span>Nous</span></button>
+      <button class="nav-item" data-screen-target="lists">☑<span>Listes</span></button>
+      <button class="nav-item" data-screen-target="planning">◷<span>Planning</span></button>
+      <button class="nav-item" data-screen-target="home">⌂<span>Maison</span></button>
+    </nav>
+
+    <button class="fab" data-action="open-add">+</button>
+  </div>
+
+  <dialog id="modal">
+    <form method="dialog" class="modal-card" id="modalForm">
+      <div class="modal-head">
+        <h3 id="modalTitle">Ajouter</h3>
+        <button class="icon-btn" value="cancel">×</button>
+      </div>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="secondary" value="cancel">Annuler</button>
+        <button class="primary" id="modalSave" value="default">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="quickAddModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Ajouter</h3>
+        <button class="icon-btn" data-close-quick>×</button>
+      </div>
+      <div class="quick-add-list">
+        <button data-quick="shopping">🛒 Course</button>
+        <button data-quick="task">✅ Tâche</button>
+        <button data-quick="event">📅 Rendez-vous</button>
+        <button data-quick="home">🏠 Maison</button>
+        <button data-quick="note">📝 Note</button>
+        <button data-quick="buy">🛍️ Achat</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

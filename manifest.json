@@ -1,0 +1,10 @@
+{
+  "name": "Nous Deux",
+  "short_name": "Nous Deux",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f4f2",
+  "theme_color": "#111111",
+  "description": "Application privée pour organiser le quotidien à deux.",
+  "icons": []
+}
