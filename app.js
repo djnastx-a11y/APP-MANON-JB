@@ -446,6 +446,6 @@ $("[data-close-settings]").onclick=()=>$("#settingsModal").close();
 $("#settingsNotificationBtn").onclick=enableNotifications;
 $("#signOutBtn").onclick=async()=>{if(confirm("Se déconnecter de Nous Deux ?")){$("#settingsModal").close();await supabaseClient?.auth.signOut()}};
 document.addEventListener("click",e=>{if(e.target.closest("button")&&navigator.vibrate)navigator.vibrate(8)},{passive:true});
-$("[data-quick]").forEach(b=>b.onclick=()=>{const q=$("#quickAddModal");if(q.open)q.close();openForm(b.dataset.quick)});
+$$("[data-quick]").forEach(b=>b.onclick=()=>{const q=$("#quickAddModal");if(q.open)q.close();openForm(b.dataset.quick)});
 if("serviceWorker" in navigator){navigator.serviceWorker.register("service-worker.js").catch(()=>{})}
 renderAll();initSupabase();
