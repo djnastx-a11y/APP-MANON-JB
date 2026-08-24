@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Nous Deux</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="app.css?v=7" />
+  <link rel="stylesheet" href="app.css?v=8" />
 </head>
 <body>
   <div class="app-shell">
@@ -17,43 +17,36 @@
         <div class="eyebrow">NOTRE QUOTIDIEN</div>
         <h1 id="pageTitle">Accueil</h1>
       </div>
-      <div class="top-actions"><button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications" title="Activer les notifications">🔕</button><button class="profile-btn" id="profileBtn" aria-label="Profil">N</button></div>
+      <div class="top-actions"><button class="icon-btn notification-btn" id="notificationBtn" aria-label="Activer les notifications" title="Activer les notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="status-dot"></span></button><button class="profile-btn" id="profileBtn" aria-label="Ouvrir les réglages">N</button></div>
     </header>
 
     <main id="app">
       <section class="screen active" data-screen="home">
         <div class="hero card">
-          <div class="hero-copy">
-            <div class="muted" id="todayLabel"></div>
-            <h2 id="helloText">Bonjour</h2>
-            <p id="summaryText">Tout ce qui compte aujourd'hui, au même endroit.</p>
+          <div class="hero-main">
+            <div class="hero-copy">
+              <div class="muted" id="todayLabel"></div>
+              <h2 id="helloText">Bonjour</h2>
+              <p id="summaryText">Votre journée, simplement.</p>
+            </div>
+            <div class="date-orbit" aria-label="Date du jour"><div><span id="heroWeekday">Aujourd’hui</span><strong id="heroDay">--</strong><small id="heroMonth"></small></div></div>
           </div>
-          <div class="date-orbit" aria-label="Date du jour">
-            <span id="heroWeekday">Aujourd’hui</span>
-            <strong id="heroDay">--</strong>
-            <small id="heroMonth"></small>
-          </div>
-          <button class="primary" data-action="open-add">+ Ajouter</button>
+          <button class="hero-add" data-action="open-add"><span>＋</span><span><strong>Ajouter</strong><small>Tâche, rendez-vous, course…</small></span></button>
         </div>
-
-        <div class="stats-grid">
-          <button class="stat card" data-jump="tasks"><span id="urgentCount">0</span><small>Urgences</small></button>
-          <button class="stat card" data-jump="lists"><span id="shoppingCount">0</span><small>Courses</small></button>
-          <button class="stat card" data-jump="planning"><span id="eventCount">0</span><small>À venir</small></button>
-          <button class="stat card" data-jump="home"><span id="homeCount">0</span><small>Maison</small></button>
+        <div class="stats-grid" aria-label="Résumé">
+          <button class="stat" data-jump="tasks"><span id="urgentCount">0</span><small>Urgences</small></button>
+          <button class="stat" data-jump="lists"><span id="shoppingCount">0</span><small>Courses</small></button>
+          <button class="stat" data-jump="planning"><span id="eventCount">0</span><small>À venir</small></button>
+          <button class="stat" data-jump="house"><span id="homeCount">0</span><small>Maison</small></button>
         </div>
-
-        <div class="section-head"><h3>Aujourd'hui</h3><button class="ghost" data-jump="planning">Voir tout</button></div>
-        <div id="todayFeed" class="stack"></div>
-
-        <div class="section-head"><h3>Accès rapides</h3></div>
-        <div class="quick-grid">
-          <button class="quick" data-jump="lists">🛒<span>Courses</span></button>
-          <button class="quick" data-jump="tasks">✅<span>Tâches</span></button>
-          <button class="quick" data-jump="planning">📅<span>Planning</span></button>
-          <button class="quick" data-jump="house">🏠<span>Maison</span></button>
-          <button class="quick" data-action="camera">📷<span>Caméra</span></button>
-          <button class="quick" data-action="budget">💳<span>Budget</span></button>
+        <div class="section-head"><h3>Aujourd’hui</h3><button class="ghost" data-jump="planning">Voir le planning</button></div>
+        <div id="todayFeed" class="stack today-feed"></div>
+        <div class="section-head compact-head"><h3>Faire maintenant</h3></div>
+        <div class="home-actions">
+          <button class="home-action" data-action="message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg><span><strong>Message</strong><small>Discussion à deux</small></span></button>
+          <button class="home-action" data-action="add-task"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span><strong>Tâche</strong><small>À faire</small></span></button>
+          <button class="home-action" data-action="add-event"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 15h8"/></svg><span><strong>Rendez-vous</strong><small>Dans le planning</small></span></button>
+          <button class="home-action" data-quick="shopping"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg><span><strong>Course</strong><small>Dans la liste</small></span></button>
         </div>
       </section>
 
@@ -135,28 +128,25 @@
         <div class="section-head"><h3>Maison</h3><button class="primary small" data-action="add-home">+ Ajouter</button></div>
         <div id="homeList" class="stack"></div>
 
-        <div class="section-head"><h3>Sections</h3></div>
-        <div class="quick-grid">
-          <button class="quick" data-action="documents">📄<span>Documents</span></button>
-          <button class="quick" data-action="pets">🐶<span>Animaux</span></button>
-          <button class="quick" data-action="car">🚗<span>Voiture</span></button>
-          <button class="quick" data-action="inventory">📦<span>Inventaire</span></button>
-          <button class="quick" data-action="budget">💳<span>Budget</span></button>
-          <button class="quick" data-action="where">🔎<span>Où est rangé ?</span></button>
+        <div class="section-head"><h3>Vos espaces</h3></div>
+        <div class="feature-list">
+          <button class="feature-row" data-action="documents"><span class="feature-icon">▤</span><span><strong>Documents</strong><small>Contrats, notices et garanties</small></span><b>›</b></button>
+          <button class="feature-row" data-action="pets"><span class="feature-icon">◇</span><span><strong>Animaux</strong><small>Informations et suivi</small></span><b>›</b></button>
+          <button class="feature-row" data-action="car"><span class="feature-icon">⌁</span><span><strong>Voiture</strong><small>Entretien et documents</small></span><b>›</b></button>
+          <button class="feature-row" data-action="inventory"><span class="feature-icon">□</span><span><strong>Inventaire</strong><small>Biens et équipements</small></span><b>›</b></button>
+          <button class="feature-row" data-action="budget"><span class="feature-icon">◔</span><span><strong>Budget</strong><small>Dépenses et objectifs</small></span><b>›</b></button>
+          <button class="feature-row" data-action="where"><span class="feature-icon">⌖</span><span><strong>Où est rangé ?</strong><small>Retrouver vos affaires</small></span><b>›</b></button>
         </div>
       </section>
     </main>
 
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-screen-target="home">⌂<span>Accueil</span></button>
-      <button class="nav-item" data-screen-target="planning">▣<span>Planning</span></button>
-      <button class="nav-item center-nav" data-screen-target="us">♡<span>Nous</span></button>
-      <button class="nav-item" data-screen-target="lists">☷<span>Listes</span></button>
-      <button class="nav-item" data-screen-target="house">⌂<span>Maison</span></button>
+    <nav class="bottom-nav" aria-label="Navigation principale">
+      <button class="nav-item active" data-screen-target="home"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span class="nav-label">Accueil</span></button>
+      <button class="nav-item" data-screen-target="planning"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg><span class="nav-label">Planning</span></button>
+      <button class="nav-item center-nav" data-screen-target="us"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><span class="nav-label">Nous</span></button>
+      <button class="nav-item" data-screen-target="lists"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span class="nav-label">Listes</span></button>
+      <button class="nav-item" data-screen-target="house"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span class="nav-label">Maison</span></button>
     </nav>
-
-    <button class="fab" data-action="open-add">+</button>
-  </div>
 
   <dialog id="modal">
     <form method="dialog" class="modal-card" id="modalForm">
@@ -189,7 +179,20 @@
     </div>
   </dialog>
 
+  <dialog id="settingsModal">
+    <div class="modal-card settings-card">
+      <div class="modal-head"><h3>Réglages</h3><button class="icon-btn" data-close-settings aria-label="Fermer">×</button></div>
+      <div class="settings-body">
+        <div class="settings-profile"><div class="settings-avatar" id="settingsAvatar">N</div><div><strong id="settingsName">Nous Deux</strong><small id="settingsEmail"></small></div></div>
+        <button class="settings-row" id="settingsNotificationBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="status-dot"></span><span><strong>Notifications</strong><small id="settingsNotificationStatus">À activer sur ce téléphone</small></span><b>›</b></button>
+        <div class="settings-row static-row"><span class="sync-mark"></span><span><strong>Synchronisation</strong><small id="settingsSyncStatus">Connectée</small></span><b>✓</b></div>
+        <div class="privacy-note"><strong>Privé pour vous deux</strong><span>Vos informations sont synchronisées avec votre compte. Ne partagez pas votre mot de passe.</span></div>
+        <button class="signout-btn" id="signOutBtn">Se déconnecter</button>
+      </div>
+    </div>
+  </dialog>
+
   <script src="config.js"></script>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
