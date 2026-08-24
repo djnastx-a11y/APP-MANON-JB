@@ -1,4 +1,4 @@
-const CACHE="nous-deux-v6";
+const CACHE="nous-deux-v7";
 const ASSETS=["./","./index.html","./app.css","./app.js","./manifest.json","./config.js"];
 
 self.addEventListener("install",event=>{
@@ -27,4 +27,24 @@ self.addEventListener("fetch",event=>{
       })
       .catch(()=>caches.match(event.request))
   );
+});
+self.addEventListener("push",event=>{
+  let data={title:"Nous Deux",body:"Nouvelle activité partagée",url:"/APP-MANON-JB/"};
+  try{if(event.data)data={...data,...event.data.json()}}catch{}
+  event.waitUntil(self.registration.showNotification(data.title,{
+    body:data.body,
+    tag:"nous-deux-"+Date.now(),
+    data:{url:data.url},
+    vibrate:[120,60,120]
+  }));
+});
+
+self.addEventListener("notificationclick",event=>{
+  event.notification.close();
+  const target=new URL(event.notification.data?.url||"/APP-MANON-JB/",self.location.origin).href;
+  event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(openClients=>{
+    const existing=openClients.find(client=>client.url.startsWith(self.location.origin+"/APP-MANON-JB/"));
+    if(existing){existing.navigate(target);return existing.focus()}
+    return clients.openWindow(target);
+  }));
 });
