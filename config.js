@@ -1,3 +1,4 @@
-// Étape suivante : renseigner ici les paramètres Supabase pour la synchronisation à deux.
-// window.APP_CONFIG = { supabaseUrl: "", supabaseAnonKey: "" };
-window.APP_CONFIG = {};
+window.APP_CONFIG = {
+  supabaseUrl: "https://apmpqnukpurfwbpgpvwe.supabase.co",
+  supabaseAnonKey: "sb_publishable_ap7OPlRhdewhfiMFbxJ8ig_xKuK5qC8"
+};
