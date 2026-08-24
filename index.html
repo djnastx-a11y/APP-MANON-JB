@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Nous Deux</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="app.css?v=10" />
+  <link rel="stylesheet" href="app.css?v=11" />
 </head>
 <body>
   <div class="app-shell">
@@ -39,6 +39,8 @@
           <button class="stat" data-jump="planning"><span id="eventCount">0</span><small>À venir</small></button>
           <button class="stat" data-jump="house"><span id="homeCount">0</span><small>Maison</small></button>
         </div>
+        <div class="notification-nudge" id="notificationNudge" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span><strong>Ne manquez rien</strong><small>Recevez les messages et les nouveautés de l’autre.</small></span><button id="nudgeNotificationBtn">Activer</button></div>
+
         <div class="section-head"><h3>Aujourd’hui</h3><button class="ghost" data-jump="planning">Voir le planning</button></div>
         <div id="todayFeed" class="stack today-feed"></div>
         <div class="section-head compact-head"><h3>Faire maintenant</h3></div>
@@ -193,6 +195,6 @@
   </dialog>
 
   <script src="config.js"></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
