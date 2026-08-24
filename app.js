@@ -108,6 +108,7 @@ async function activateSession(user){
   hideAuthGate();
   renderAll();
   setSyncStatus("Synchronisé");
+  setupNotificationButton();
   const profileBtn=document.querySelector('[aria-label="Profil"]');
   if(profileBtn){
     profileBtn.textContent=currentDisplayName.slice(0,1).toUpperCase();
@@ -155,8 +156,82 @@ async function initSupabase(){
   }
 }
 
+const NOTIFICATION_FUNCTION="send-push";
+const VAPID_PUBLIC_KEY="BMcWFM9x5bWukvAOC5Y2PjrzOdhpVONySuFklfItIlgomFmoj6-x05Atj2nscWRN_UxsAq3XTy5iYtn_9-23L-I";
+function base64UrlToBytes(value){
+  const padding="=".repeat((4-value.length%4)%4);
+  const base64=(value+padding).replace(/-/g,"+").replace(/_/g,"/");
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(char=>char.charCodeAt(0)));
+}
+async function setupNotificationButton(){
+  const button=document.getElementById("notificationBtn");
+  if(!button)return;
+  button.onclick=enableNotifications;
+  if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){
+    button.textContent="🔕";
+    button.title="Notifications non disponibles sur ce navigateur";
+    return;
+  }
+  const registration=await navigator.serviceWorker.ready.catch(()=>null);
+  const subscription=registration?await registration.pushManager.getSubscription().catch(()=>null):null;
+  const enabled=Notification.permission==="granted"&&!!subscription;
+  button.textContent=enabled?"🔔":"🔕";
+  button.classList.toggle("enabled",enabled);
+  button.title=enabled?"Notifications activées":"Activer les notifications";
+}
+async function enableNotifications(){
+  if(!currentUser||!supabaseClient)return;
+  const button=document.getElementById("notificationBtn");
+  const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  const standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+  if(isiOS&&!standalone){
+    alert("Sur iPhone : dans Safari, touchez Partager puis Sur l’écran d’accueil. Rouvrez ensuite Nous Deux depuis son icône pour activer les notifications.");
+    return;
+  }
+  if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){
+    alert("Ce navigateur ne permet pas les notifications. Installez Nous Deux sur l’écran d’accueil puis réessayez.");
+    return;
+  }
+  if(Notification.permission==="denied"){
+    alert("Les notifications sont bloquées. Autorisez-les dans les réglages du téléphone pour Nous Deux.");
+    return;
+  }
+  button?.classList.add("working");
+  try{
+    const permission=await Notification.requestPermission();
+    if(permission!=="granted")return;
+    const registration=await navigator.serviceWorker.ready;
+    let subscription=await registration.pushManager.getSubscription();
+    if(!subscription){
+      subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToBytes(VAPID_PUBLIC_KEY)});
+    }
+    const json=subscription.toJSON();
+    const {error}=await supabaseClient.from("push_subscriptions").upsert({
+      user_id:currentUser.id,
+      endpoint:subscription.endpoint,
+      p256dh:json.keys?.p256dh||"",
+      auth:json.keys?.auth||"",
+      platform:isiOS?"ios":"web",
+      updated_at:new Date().toISOString()
+    },{onConflict:"endpoint"});
+    if(error)throw error;
+    await setupNotificationButton();
+    alert("Notifications activées. Vous recevrez maintenant les nouveautés de l’autre.");
+  }catch(error){
+    console.error("Notification setup failed",error);
+    alert("Impossible d’activer les notifications pour le moment. Fermez puis rouvrez l’application et réessayez.");
+  }finally{button?.classList.remove("working")}
+}
+async function notifyPartner(title,body){
+  if(!supabaseClient||!currentUser)return;
+  try{
+    await supabaseClient.functions.invoke(NOTIFICATION_FUNCTION,{body:{title,body,url:"/APP-MANON-JB/"}});
+  }catch(error){console.warn("Push notification failed",error)}
+}
+
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const save=()=>{localStorage.setItem(stateKey,JSON.stringify(state));renderAll();queueRemoteSave()};
+const save=(notification=null)=>{localStorage.setItem(stateKey,JSON.stringify(state));renderAll();queueRemoteSave();if(notification)notifyPartner(notification.title,notification.body)};
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
 const esc=s=>(s??"").toString().replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
@@ -275,7 +350,7 @@ window.editChatMessage=id=>{
   const message=state.chat.find(m=>String(m.id)===String(id));
   if(!message)return;
   const next=prompt("Modifier le message",message.text);
-  if(next!==null&&next.trim()){message.text=next.trim();message.edited=true;save()}
+  if(next!==null&&next.trim()){message.text=next.trim();message.edited=true;save({title:"Message modifié",body:currentDisplayName+" : "+message.text})}
 };
 
 function renderHomeSummary(){
@@ -292,12 +367,12 @@ function renderHomeSummary(){
   $("#todayFeed").innerHTML=feed.length?feed.join(""):`<div class="empty card">Rien d'urgent pour le moment.</div>`;
 }
 function renderAll(){renderShopping();renderTasks();renderCalendar();renderEvents();renderHome();renderNotes();renderBuys();renderChat();renderHomeSummary()}
-window.toggleItem=(type,id)=>{const i=state[type].find(x=>x.id===id);if(i){i.done=!i.done;save()}};
-window.removeItem=(type,id)=>{if(!confirm("Supprimer cet élément ?"))return;state[type]=state[type].filter(x=>String(x.id)!==String(id));save()};
+window.toggleItem=(type,id)=>{const i=state[type].find(x=>x.id===id);if(i){i.done=!i.done;save({title:i.done?"Élément terminé":"Élément rouvert",body:currentDisplayName+" : "+(i.title||"Mise à jour")})}};
+window.removeItem=(type,id)=>{if(!confirm("Supprimer cet élément ?"))return;const removed=state[type].find(x=>String(x.id)===String(id));state[type]=state[type].filter(x=>String(x.id)!==String(id));save({title:"Élément supprimé",body:currentDisplayName+" : "+(removed?.title||removed?.text||"Mise à jour")})};
 
-$("#addShoppingBtn").onclick=()=>{const v=$("#shoppingInput").value.trim();if(!v)return;state.shopping.unshift({id:uid(),title:v,done:false,store:"Courses"});$("#shoppingInput").value="";save()};
+$("#addShoppingBtn").onclick=()=>{const v=$("#shoppingInput").value.trim();if(!v)return;state.shopping.unshift({id:uid(),title:v,done:false,store:"Courses"});$("#shoppingInput").value="";save({title:"Nouvelle course",body:currentDisplayName+" a ajouté : "+v})};
 $("#shoppingInput").addEventListener("keydown",e=>{if(e.key==="Enter"){$("#addShoppingBtn").click()}});
-$("#chatForm").onsubmit=e=>{e.preventDefault();const v=$("#chatInput").value.trim();if(!v)return;state.chat.push({id:uid(),from:currentDisplayName,userId:currentUser?.id||null,text:v,time:new Date().toISOString()});$("#chatInput").value="";save()};
+$("#chatForm").onsubmit=e=>{e.preventDefault();const v=$("#chatInput").value.trim();if(!v)return;state.chat.push({id:uid(),from:currentDisplayName,userId:currentUser?.id||null,text:v,time:new Date().toISOString()});$("#chatInput").value="";save({title:"Message de "+currentDisplayName,body:v})};
 
 const modal=$("#modal"), modalTitle=$("#modalTitle"), modalBody=$("#modalBody");
 let modalType=null;
@@ -331,19 +406,21 @@ $("#modalForm").addEventListener("submit",e=>{
   if(!fd.title?.trim())return;
   const key=collectionFor[modalType];
   const base={title:fd.title.trim()};
+  const wasEditing=editingId!==null;
   if(modalType==="task")Object.assign(base,{owner:fd.owner,priority:fd.priority,done:false});
   if(modalType==="event")Object.assign(base,{date:fd.date,time:fd.time});
   if(modalType==="home")Object.assign(base,{category:fd.category||"Maison",priority:fd.priority,done:false});
   if(modalType==="note")Object.assign(base,{text:fd.text});
   if(modalType==="buy")Object.assign(base,{price:fd.price,priority:fd.priority});
   if(modalType==="shopping")Object.assign(base,{store:fd.store||"Courses",done:false});
-  if(editingId!==null){
+  if(wasEditing){
     const existing=state[key].find(x=>String(x.id)===String(editingId));
     if(existing)Object.assign(existing,base);
   }else state[key].unshift({id:uid(),...base});
+  const notificationLabel={task:"tâche",event:"événement",home:"élément Maison",note:"note",buy:"achat",shopping:"course"}[modalType]||"élément";
   editingId=null;
   modal.close();
-  save();
+  save({title:(wasEditing?"Modification : ":"Nouveau : ")+notificationLabel,body:currentDisplayName+" : "+base.title});
 });
 
 $$("[data-action]").forEach(b=>b.addEventListener("click",()=>{
