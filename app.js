@@ -203,28 +203,43 @@ function renderTasks(){
 }
 
 let calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1);
-let selectedCalendarDate=new Date().toISOString().slice(0,10);
 const calendarKey=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+let selectedCalendarDate=calendarKey(new Date());
 window.selectCalendarDate=key=>{selectedCalendarDate=key;renderCalendar();renderEvents()};
-window.changeCalendarMonth=delta=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+delta,1);renderCalendar()};
+window.changeCalendarMonth=delta=>{
+  calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+delta,1);
+  const now=new Date();
+  selectedCalendarDate=now.getFullYear()===calendarCursor.getFullYear()&&now.getMonth()===calendarCursor.getMonth()?calendarKey(now):calendarKey(calendarCursor);
+  renderCalendar();
+  renderEvents();
+};
 function renderCalendar(){
   const grid=$("#calendarGrid");
   if(!grid)return;
+  const year=calendarCursor.getFullYear();
+  const month=calendarCursor.getMonth();
   $("#calendarMonth").textContent=calendarCursor.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
-  const first=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth(),1);
+  const first=new Date(year,month,1);
   const start=(first.getDay()+6)%7;
-  const cursor=new Date(first);cursor.setDate(cursor.getDate()-start);
-  const today=new Date().toISOString().slice(0,10);
-  const days=[];
-  for(let n=0;n<42;n++){
-    const d=new Date(cursor);d.setDate(cursor.getDate()+n);
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const cellCount=Math.ceil((start+daysInMonth)/7)*7;
+  const cursor=new Date(first);
+  cursor.setDate(cursor.getDate()-start);
+  const today=calendarKey(new Date());
+  const cells=[];
+  for(let n=0;n<cellCount;n++){
+    const d=new Date(cursor);
+    d.setDate(cursor.getDate()+n);
+    if(d.getFullYear()!==year||d.getMonth()!==month){
+      cells.push('<span class="calendar-day empty-day" aria-hidden="true"></span>');
+      continue;
+    }
     const key=calendarKey(d);
     const count=state.events.filter(e=>e.date===key).length;
-    days.push('<button class="calendar-day '+(d.getMonth()!==calendarCursor.getMonth()?'outside ':'')+(key===today?'today ':'')+(key===selectedCalendarDate?'selected':'')+'" onclick="selectCalendarDate(\''+key+'\')"><span>'+d.getDate()+'</span>'+(count?'<i>'+Array(Math.min(count,3)).fill('•').join('')+'</i>':'')+'</button>');
+    cells.push('<button class="calendar-day '+(key===today?'today ':'')+(key===selectedCalendarDate?'selected':'')+'" onclick="selectCalendarDate(\''+key+'\')"><span>'+d.getDate()+'</span>'+(count?'<i>'+Array(Math.min(count,3)).fill('•').join('')+'</i>':'')+'</button>');
   }
-  grid.innerHTML=days.join("");
+  grid.innerHTML=cells.join("");
 }
-
 function renderEvents(){
   const all=[...state.events].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const events=all.filter(e=>e.date===selectedCalendarDate);
