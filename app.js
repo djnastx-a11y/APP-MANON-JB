@@ -23,17 +23,15 @@ function ensureSyncUi(){
   if(!document.getElementById("syncStatus")){
     const el=document.createElement("div");
     el.id="syncStatus";
-    el.style.cssText="position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:90;padding:7px 11px;border-radius:999px;background:#071d38;color:#68d8ff;border:1px solid #1d74c8;font:700 12px system-ui;box-shadow:0 8px 24px #001a3b66";
-    el.textContent="Connexion…";
-    document.body.appendChild(el);
+    el.style.cssText="position:fixed;top:calc(9px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-8px);z-index:90;padding:7px 11px;border-radius:999px;background:#071d38;color:#68d8ff;border:1px solid #1d74c8;font:700 11px system-ui;box-shadow:0 8px 24px #001a3b66;pointer-events:none;opacity:0;transition:.22s ease;white-space:nowrap";
+    el.textContent="Connexion…";document.body.appendChild(el);
   }
 }
 function setSyncStatus(text,error=false){
-  ensureSyncUi();
-  const el=document.getElementById("syncStatus");
-  el.textContent=text;
-  el.style.background=error?"#2a0f1b":"#071d38";
-  el.style.color=error?"#ff9ab2":"#68d8ff";
+  ensureSyncUi();const el=document.getElementById("syncStatus");
+  el.textContent=text;el.style.background=error?"#2a0f1b":"#071d38";el.style.color=error?"#ff9ab2":"#68d8ff";el.style.opacity="1";el.style.transform="translateX(-50%) translateY(0)";
+  const setting=document.getElementById("settingsSyncStatus");if(setting)setting.textContent=error?text:"Connectée et à jour";
+  clearTimeout(el._hideTimer);el._hideTimer=setTimeout(()=>{el.style.opacity="0";el.style.transform="translateX(-50%) translateY(-8px)"},error?5000:1700);
 }
 function buildAuthGate(){
   if(document.getElementById("authGate"))return;
@@ -109,12 +107,8 @@ async function activateSession(user){
   renderAll();
   setSyncStatus("Synchronisé");
   setupNotificationButton();
-  const profileBtn=document.querySelector('[aria-label="Profil"]');
-  if(profileBtn){
-    profileBtn.textContent=currentDisplayName.slice(0,1).toUpperCase();
-    profileBtn.title="Appuyer pour se déconnecter";
-    profileBtn.onclick=async()=>{if(confirm("Se déconnecter de Nous Deux ?"))await supabaseClient.auth.signOut()};
-  }
+  const profileBtn=document.getElementById("profileBtn");
+  if(profileBtn){profileBtn.textContent=currentDisplayName.slice(0,1).toUpperCase();profileBtn.title="Ouvrir les réglages";profileBtn.setAttribute("aria-label","Ouvrir les réglages");profileBtn.onclick=openSettings}
   if(realtimeChannel)await supabaseClient.removeChannel(realtimeChannel);
   realtimeChannel=supabaseClient.channel("couple-state-live").on("postgres_changes",{event:"*",schema:"public",table:"couple_state",filter:"id=eq.main"},payload=>{
     if(payload.new?.data){
@@ -164,21 +158,16 @@ function base64UrlToBytes(value){
   const raw=atob(base64);
   return Uint8Array.from([...raw].map(char=>char.charCodeAt(0)));
 }
+function paintNotificationState(button,enabled,available=true){
+  if(button){button.classList.toggle("enabled",enabled);button.title=available?(enabled?"Notifications activées":"Activer les notifications"):"Notifications non disponibles";button.setAttribute("aria-label",button.title)}
+  const status=document.getElementById("settingsNotificationStatus");if(status)status.textContent=!available?"Non disponibles sur ce navigateur":enabled?"Activées sur ce téléphone":"À activer sur ce téléphone";
+}
 async function setupNotificationButton(){
-  const button=document.getElementById("notificationBtn");
-  if(!button)return;
-  button.onclick=enableNotifications;
-  if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){
-    button.textContent="🔕";
-    button.title="Notifications non disponibles sur ce navigateur";
-    return;
-  }
+  const button=document.getElementById("notificationBtn");if(!button)return;button.onclick=enableNotifications;
+  if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){paintNotificationState(button,false,false);return}
   const registration=await navigator.serviceWorker.ready.catch(()=>null);
   const subscription=registration?await registration.pushManager.getSubscription().catch(()=>null):null;
-  const enabled=Notification.permission==="granted"&&!!subscription;
-  button.textContent=enabled?"🔔":"🔕";
-  button.classList.toggle("enabled",enabled);
-  button.title=enabled?"Notifications activées":"Activer les notifications";
+  paintNotificationState(button,Notification.permission==="granted"&&!!subscription,true);
 }
 async function enableNotifications(){
   if(!currentUser||!supabaseClient)return;
@@ -235,10 +224,22 @@ const save=(notification=null)=>{localStorage.setItem(stateKey,JSON.stringify(st
 const uid=()=>Date.now()+Math.floor(Math.random()*999);
 const esc=s=>(s??"").toString().replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
+function openSettings(){
+  const dialog=document.getElementById("settingsModal");if(!dialog)return;
+  const initial=currentDisplayName?.slice(0,1).toUpperCase()||"N";
+  document.getElementById("settingsAvatar").textContent=initial;
+  document.getElementById("settingsName").textContent=currentDisplayName||"Nous Deux";
+  document.getElementById("settingsEmail").textContent=currentUser?.email||"";
+  const sync=document.getElementById("syncStatus");
+  document.getElementById("settingsSyncStatus").textContent=sync?.textContent==="Synchronisé"?"Connectée et à jour":sync?.textContent||"Connectée";
+  setupNotificationButton();dialog.showModal();
+}
+
 function setScreen(name){
   $$(".screen").forEach(x=>x.classList.toggle("active",x.dataset.screen===name));
-  $$(".nav-item").forEach(x=>x.classList.toggle("active",x.dataset.screenTarget===name));
-  $("#pageTitle").textContent={home:"Accueil",us:"Nous",lists:"Listes",planning:"Planning",house:"Maison"}[name]||"Nous Deux";
+  $$(".nav-item").forEach(x=>{const active=x.dataset.screenTarget===name;x.classList.toggle("active",active);if(active)x.setAttribute("aria-current","page");else x.removeAttribute("aria-current")});
+  const label={home:"Accueil",us:"Nous",lists:"Listes",planning:"Planning",house:"Maison"}[name]||"Nous Deux";
+  $("#pageTitle").textContent=label;document.title=label+" · Nous Deux";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 $$("[data-screen-target]").forEach(b=>b.onclick=()=>setScreen(b.dataset.screenTarget));
@@ -356,15 +357,21 @@ window.editChatMessage=id=>{
 function renderHomeSummary(){
   const urgent=state.tasks.filter(t=>!t.done&&t.priority==="urgent").length;
   const shopping=state.shopping.filter(x=>!x.done).length;
-  const upcoming=state.events.filter(e=>new Date(e.date+"T"+(e.time||"00:00"))>=new Date()).length;
+  const now=new Date();
+  const upcoming=state.events.filter(e=>new Date(e.date+"T"+(e.time||"00:00"))>=now).length;
   const home=state.home.filter(x=>!x.done).length;
   $("#urgentCount").textContent=urgent;$("#shoppingCount").textContent=shopping;$("#eventCount").textContent=upcoming;$("#homeCount").textContent=home;
-  const d=new Date();$("#todayLabel").textContent=d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});if($("#heroWeekday"))$("#heroWeekday").textContent=d.toLocaleDateString("fr-FR",{weekday:"long"});if($("#heroDay"))$("#heroDay").textContent=d.getDate();if($("#heroMonth"))$("#heroMonth").textContent=d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+  const d=new Date();
+  $("#todayLabel").textContent=d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  if($("#heroWeekday"))$("#heroWeekday").textContent=d.toLocaleDateString("fr-FR",{weekday:"long"});
+  if($("#heroDay"))$("#heroDay").textContent=d.getDate();
+  if($("#heroMonth"))$("#heroMonth").textContent=d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
   $("#helloText").textContent="Bonjour "+currentDisplayName;
+  const todayKey=d.toISOString().slice(0,10);
   const feed=[];
-  state.tasks.filter(x=>!x.done).slice(0,3).forEach(x=>feed.push(`<div class="item"><div class="grow"><div class="title">${esc(x.title)}</div><div class="meta">Tâche · ${esc(x.owner||"Nous deux")}</div></div><span class="badge ${x.priority==="urgent"?"urgent":""}">${esc(x.priority)}</span></div>`));
-  state.events.slice(0,2).forEach(x=>feed.push(`<div class="item"><div class="grow"><div class="title">${esc(x.title)}</div><div class="meta">Planning · ${esc(x.date)} ${esc(x.time||"")}</div></div></div>`));
-  $("#todayFeed").innerHTML=feed.length?feed.join(""):`<div class="empty card">Rien d'urgent pour le moment.</div>`;
+  state.events.filter(x=>x.date===todayKey).sort((a,b)=>(a.time||"").localeCompare(b.time||"")).slice(0,2).forEach(x=>feed.push('<div class="item"><div class="grow"><div class="title">'+esc(x.title)+'</div><div class="meta">Aujourd’hui · '+esc(x.time||"Toute la journée")+'</div></div></div>'));
+  state.tasks.filter(x=>!x.done).sort((a,b)=>(a.priority==="urgent"?-1:1)-(b.priority==="urgent"?-1:1)).slice(0,3-feed.length).forEach(x=>feed.push('<div class="item"><div class="grow"><div class="title">'+esc(x.title)+'</div><div class="meta">Tâche · '+esc(x.owner||"Nous deux")+'</div></div><span class="badge '+(x.priority==="urgent"?"urgent":"")+'">'+esc(x.priority)+'</span></div>'));
+  $("#todayFeed").innerHTML=feed.length?feed.join(""):'<div class="empty card">Journée libre pour le moment.</div>';
 }
 function renderAll(){renderShopping();renderTasks();renderCalendar();renderEvents();renderHome();renderNotes();renderBuys();renderChat();renderHomeSummary()}
 window.toggleItem=(type,id)=>{const i=state[type].find(x=>x.id===id);if(i){i.done=!i.done;save({title:i.done?"Élément terminé":"Élément rouvert",body:currentDisplayName+" : "+(i.title||"Mise à jour")})}};
@@ -426,6 +433,7 @@ $("#modalForm").addEventListener("submit",e=>{
 $$("[data-action]").forEach(b=>b.addEventListener("click",()=>{
   const a=b.dataset.action;
   if(a==="open-add")$("#quickAddModal").showModal();
+  if(a==="message"){setScreen("us");setTimeout(()=>$("#chatInput")?.focus(),250)}
   if(a==="add-task")openForm("task");
   if(a==="add-event")openForm("event");
   if(a==="add-home")openForm("home");
@@ -434,6 +442,10 @@ $$("[data-action]").forEach(b=>b.addEventListener("click",()=>{
   if(["camera","budget","documents","pets","car","inventory","where"].includes(a))alert("Module prêt à être connecté dans la prochaine étape.");
 }));
 $("[data-close-quick]").onclick=()=>$("#quickAddModal").close();
-$$("[data-quick]").forEach(b=>b.onclick=()=>{$("#quickAddModal").close();openForm(b.dataset.quick)});
+$("[data-close-settings]").onclick=()=>$("#settingsModal").close();
+$("#settingsNotificationBtn").onclick=enableNotifications;
+$("#signOutBtn").onclick=async()=>{if(confirm("Se déconnecter de Nous Deux ?")){$("#settingsModal").close();await supabaseClient?.auth.signOut()}};
+document.addEventListener("click",e=>{if(e.target.closest("button")&&navigator.vibrate)navigator.vibrate(8)},{passive:true});
+$("[data-quick]").forEach(b=>b.onclick=()=>{const q=$("#quickAddModal");if(q.open)q.close();openForm(b.dataset.quick)});
 if("serviceWorker" in navigator){navigator.serviceWorker.register("service-worker.js").catch(()=>{})}
 renderAll();initSupabase();
