@@ -63,3 +63,10 @@ html,body{background:linear-gradient(180deg,#070b12 0,#05080d 42%,#05080d 100%);
 .profile-btn{background:#176dd5;box-shadow:none}.primary{background:#2377ee;box-shadow:none}.secondary{border-color:#2f5d91;background:#0f2035}.notification-btn.enabled{box-shadow:none;border-color:#315d8e}
 .settings-avatar{background:#176dd5;box-shadow:none}.settings-row{background:#0d1723}.privacy-note{background:#0d1a29}
 @media(max-width:350px){.today-chip{width:91px;flex-basis:91px}.today-chip strong{font-size:2rem}}
+
+/* Version 11 — activation guidée */
+.notification-nudge{margin-top:9px;padding:11px 12px;border:1px solid #244466;border-radius:15px;background:#0d1c2d;display:flex;align-items:center;gap:10px;color:var(--text)}
+.notification-nudge>svg{width:28px;height:28px;flex:0 0 auto;padding:5px;border-radius:9px;color:#70bcff;background:#142b44;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.notification-nudge>span{min-width:0;flex:1}.notification-nudge strong,.notification-nudge small{display:block}.notification-nudge strong{font-size:.76rem}.notification-nudge small{font-size:.62rem;line-height:1.35;color:#91a2b7;margin-top:3px}
+.notification-nudge>button{min-height:36px;padding:0 11px;border:0;border-radius:10px;background:#2377ee;color:#fff;font-size:.68rem;font-weight:750}
+@media(max-width:350px){.notification-nudge>svg{display:none}.notification-nudge{gap:7px;padding:10px}.notification-nudge>button{padding-inline:9px}}
