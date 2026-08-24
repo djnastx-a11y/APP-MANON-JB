@@ -1,4 +1,4 @@
-const CACHE="nous-deux-v5";
+const CACHE="nous-deux-v6";
 const ASSETS=["./","./index.html","./app.css","./app.js","./manifest.json","./config.js"];
 
 self.addEventListener("install",event=>{
