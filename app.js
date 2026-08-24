@@ -23,7 +23,7 @@ function ensureSyncUi(){
   if(!document.getElementById("syncStatus")){
     const el=document.createElement("div");
     el.id="syncStatus";
-    el.style.cssText="position:fixed;top:12px;right:12px;z-index:90;padding:7px 11px;border-radius:999px;background:#eef2ff;color:#4338ca;font:700 12px system-ui;box-shadow:0 8px 24px #312e8122";
+    el.style.cssText="position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:90;padding:7px 11px;border-radius:999px;background:#071d38;color:#68d8ff;border:1px solid #1d74c8;font:700 12px system-ui;box-shadow:0 8px 24px #001a3b66";
     el.textContent="Connexion…";
     document.body.appendChild(el);
   }
@@ -32,8 +32,8 @@ function setSyncStatus(text,error=false){
   ensureSyncUi();
   const el=document.getElementById("syncStatus");
   el.textContent=text;
-  el.style.background=error?"#fff1f2":"#ecfdf5";
-  el.style.color=error?"#be123c":"#047857";
+  el.style.background=error?"#2a0f1b":"#071d38";
+  el.style.color=error?"#ff9ab2":"#68d8ff";
 }
 function buildAuthGate(){
   if(document.getElementById("authGate"))return;
@@ -250,9 +250,19 @@ function renderBuys(){
 }
 function renderChat(){
   const list=$("#chatList");
-  list.innerHTML=state.chat.map(m=>`<div class="bubble ${(m.userId&&currentUser&&m.userId===currentUser.id)||m.from===currentDisplayName?"me":""}"><div>${esc(m.text)}</div><div class="time">${new Date(m.time).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div></div>`).join("");
+  list.innerHTML=state.chat.map(m=>{
+    const own=(m.userId&&currentUser&&m.userId===currentUser.id)||m.from===currentDisplayName;
+    return `<div class="bubble ${own?"me":""}"><div>${esc(m.text)}</div><div class="time">${new Date(m.time).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}${m.edited?" · modifié":""}</div>${own?`<div class="chat-actions"><button class="chat-action" onclick="editChatMessage(${m.id})">Modifier</button><button class="chat-action delete" onclick="removeItem('chat',${m.id})">Supprimer</button></div>`:""}</div>`;
+  }).join("");
   list.scrollTop=list.scrollHeight;
 }
+window.editChatMessage=id=>{
+  const message=state.chat.find(m=>String(m.id)===String(id));
+  if(!message)return;
+  const next=prompt("Modifier le message",message.text);
+  if(next!==null&&next.trim()){message.text=next.trim();message.edited=true;save()}
+};
+
 function renderHomeSummary(){
   const urgent=state.tasks.filter(t=>!t.done&&t.priority==="urgent").length;
   const shopping=state.shopping.filter(x=>!x.done).length;
