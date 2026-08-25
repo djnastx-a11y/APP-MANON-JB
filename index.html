@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="stylesheet" href="app.css?v=12" />
+  <link rel="stylesheet" href="app.css?v=13" />
 </head>
 <body>
   <div class="app-shell">
@@ -156,11 +156,11 @@
     <form method="dialog" class="modal-card" id="modalForm">
       <div class="modal-head">
         <h3 id="modalTitle">Ajouter</h3>
-        <button class="icon-btn" value="cancel">×</button>
+        <button class="icon-btn" type="button" onclick="document.getElementById('modal').close()" aria-label="Fermer">×</button>
       </div>
       <div id="modalBody"></div>
       <div class="modal-actions">
-        <button class="secondary" value="cancel">Annuler</button>
+        <button class="secondary" type="button" onclick="document.getElementById('modal').close()">Annuler</button>
         <button class="primary" id="modalSave" value="default">Enregistrer</button>
       </div>
     </form>
@@ -197,6 +197,6 @@
   </dialog>
 
   <script src="config.js"></script>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
