@@ -350,7 +350,7 @@ function renderHomeSummary(){
   const todayKey=d.toISOString().slice(0,10);
   const feed=[];
   state.events.filter(x=>x.date===todayKey).sort((a,b)=>(a.time||"").localeCompare(b.time||"")).slice(0,2).forEach(x=>feed.push('<div class="item"><div class="grow"><div class="title">'+esc(x.title)+'</div><div class="meta">Aujourd’hui · '+esc(x.time||"Toute la journée")+'</div></div></div>'));
-  state.tasks.filter(x=>!x.done).sort((a,b)=>(a.priority==="urgent"?-1:1)-(b.priority==="urgent"?-1:1)).slice(0,3-feed.length).forEach(x=>feed.push('<div class="item"><div class="grow"><div class="title">'+esc(x.title)+'</div><div class="meta">Tâche · '+esc(x.owner||"Nous deux")+'</div></div><span class="badge '+(x.priority==="urgent"?"urgent":"")+'">'+esc(x.priority)+'</span></div>'));
+  state.tasks.filter(x=>!x.done).sort((a,b)=>(a.priority==="urgent"?-1:1)-(b.priority==="urgent"?-1:1)).slice(0,3-feed.length).forEach(x=>feed.push('<button class="item home-feed-link" type="button" onclick="setScreen(\'lists\');setListTab(\'tasks\')"><div class="grow"><div class="title">'+esc(x.title)+'</div><div class="meta">Tâche · '+esc(x.owner||"Nous deux")+'</div></div><span class="badge '+(x.priority==="urgent"?"urgent":"")+'">'+esc(x.priority)+'</span><span aria-hidden="true">›</span></button>'));
   $("#todayFeed").innerHTML=feed.length?feed.join(""):'<div class="empty card">Journée libre pour le moment.</div>';
 }
 function renderAll(){renderShopping();renderTasks();renderCalendar();renderEvents();renderHome();renderNotes();renderBuys();renderChat();renderHomeSummary()}
