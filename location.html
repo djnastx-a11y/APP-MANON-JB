@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#020817" />
+  <title>Localisation · Nous Deux</title>
+  <link rel="stylesheet" href="app.css?v=14" />
+  <link rel="stylesheet" href="location.css?v=1" />
+</head>
+<body>
+  <main class="location-shell">
+    <header class="location-header">
+      <a class="back-link" href="index.html" aria-label="Retour">‹</a>
+      <div><div class="eyebrow">NOUS DEUX</div><h1>Localisation</h1></div>
+      <span id="liveBadge" class="live-badge off">En pause</span>
+    </header>
+
+    <section class="location-hero card">
+      <div>
+        <h2>Partage privé à deux</h2>
+        <p>Ta position n’est envoyée que lorsque tu actives le partage. Tu peux le couper immédiatement.</p>
+      </div>
+      <label class="location-switch">
+        <input id="sharingToggle" type="checkbox" />
+        <span></span>
+      </label>
+    </section>
+
+    <div id="locationMessage" class="location-message" role="status" aria-live="polite"></div>
+
+    <section class="location-grid">
+      <article class="person-location card" id="meCard">
+        <div class="person-head"><span class="person-avatar" id="meAvatar">J</span><div><strong id="meName">Moi</strong><small>Ma position</small></div></div>
+        <div class="location-value" id="meStatus">Aucune position</div>
+        <div class="location-meta" id="meMeta"></div>
+        <a id="meMapLink" class="map-link hidden" target="_blank" rel="noopener">Ouvrir sur la carte</a>
+      </article>
+
+      <article class="person-location card" id="partnerCard">
+        <div class="person-head"><span class="person-avatar partner" id="partnerAvatar">M</span><div><strong id="partnerName">Manon</strong><small>Dernière position connue</small></div></div>
+        <div class="location-value" id="partnerStatus">Aucune position</div>
+        <div class="location-meta" id="partnerMeta"></div>
+        <a id="partnerMapLink" class="map-link hidden" target="_blank" rel="noopener">Ouvrir sur la carte</a>
+      </article>
+    </section>
+
+    <section class="location-actions card">
+      <button class="primary" id="refreshLocationBtn" type="button">Actualiser</button>
+      <button class="secondary" id="centerOnMeBtn" type="button">Envoyer ma position maintenant</button>
+    </section>
+
+    <section class="privacy-card card">
+      <strong>Confidentialité</strong>
+      <p>Le partage est volontaire et visible. Aucune localisation cachée n’est activée. Le suivi continu en arrière-plan sera géré par les versions mobiles Android et iPhone avec les permissions système dédiées.</p>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script type="module" src="location.js?v=1"></script>
+</body>
+</html>
