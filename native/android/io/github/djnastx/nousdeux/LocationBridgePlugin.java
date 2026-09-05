@@ -14,29 +14,25 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
+import java.net.URL;
+
 @CapacitorPlugin(
     name = "LocationBridge",
     permissions = {
-        @Permission(
-            alias = "location",
-            strings = {
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            }
-        )
+        @Permission(alias = "location", strings = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION })
     }
 )
 public final class LocationBridgePlugin extends Plugin {
+    private static final String EXPECTED_HOST = "apmpqnukpurfwbpgpvwe.supabase.co";
+    private static final String EXPECTED_PATH = "/functions/v1/location-ingest";
 
     @PluginMethod
     public void start(PluginCall call) {
         if (!validateStartCall(call)) return;
-
         if (getPermissionState("location") != PermissionState.GRANTED) {
             requestPermissionForAlias("location", call, "handleLocationPermission");
             return;
         }
-
         startWithGrantedPermission(call);
     }
 
@@ -52,10 +48,8 @@ public final class LocationBridgePlugin extends Plugin {
     @PluginMethod
     public void stop(PluginCall call) {
         try {
-            Intent intent = new Intent(getContext(), LocationTrackingService.class);
-            getContext().stopService(intent);
+            getContext().stopService(new Intent(getContext(), LocationTrackingService.class));
             SecureSessionStore.clear(getContext());
-
             JSObject result = new JSObject();
             result.put("running", false);
             call.resolve(result);
@@ -69,37 +63,24 @@ public final class LocationBridgePlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("permission", getPermissionState("location").toString().toLowerCase());
         try {
-            result.put("sessionStored", SecureSessionStore.load(getContext()) != null);
+            result.put("credentialStored", SecureSessionStore.load(getContext()) != null);
         } catch (Exception error) {
-            result.put("sessionStored", false);
+            result.put("credentialStored", false);
         }
         call.resolve(result);
     }
 
     private void startWithGrantedPermission(PluginCall call) {
         try {
-            String supabaseUrl = requireString(call, "supabaseUrl");
-            String publishableKey = requireString(call, "publishableKey");
-            String accessToken = requireString(call, "accessToken");
-            String refreshToken = requireString(call, "refreshToken");
-            String userId = requireString(call, "userId");
-
-            if (!supabaseUrl.startsWith("https://")) {
-                call.reject("Supabase URL must use HTTPS", "INVALID_SUPABASE_URL");
+            String ingestUrl = requireString(call, "ingestUrl");
+            String deviceToken = requireString(call, "deviceToken");
+            validateIngestUrl(ingestUrl);
+            if (deviceToken.length() < 32 || deviceToken.length() > 128 || !deviceToken.matches("^[A-Za-z0-9_-]+$")) {
+                call.reject("Invalid device token", "INVALID_DEVICE_TOKEN");
                 return;
             }
 
-            SecureSessionStore.save(
-                getContext(),
-                new SecureSessionStore.Session(
-                    supabaseUrl,
-                    publishableKey,
-                    accessToken,
-                    refreshToken,
-                    userId
-                )
-            );
-
+            SecureSessionStore.save(getContext(), new SecureSessionStore.Session(ingestUrl, deviceToken));
             Intent intent = new Intent(getContext(), LocationTrackingService.class);
             intent.setAction(LocationTrackingService.ACTION_START);
             ContextCompat.startForegroundService(getContext(), intent);
@@ -108,7 +89,8 @@ public final class LocationBridgePlugin extends Plugin {
             result.put("running", true);
             call.resolve(result);
         } catch (IllegalArgumentException error) {
-            call.reject(error.getMessage(), "INVALID_LOCATION_SESSION", error);
+            SecureSessionStore.clear(getContext());
+            call.reject(error.getMessage(), "INVALID_LOCATION_DEVICE", error);
         } catch (Exception error) {
             SecureSessionStore.clear(getContext());
             call.reject("Unable to start native location service", "LOCATION_START_FAILED", error);
@@ -116,22 +98,27 @@ public final class LocationBridgePlugin extends Plugin {
     }
 
     private boolean validateStartCall(PluginCall call) {
-        String[] keys = { "supabaseUrl", "publishableKey", "accessToken", "refreshToken", "userId" };
+        String[] keys = { "ingestUrl", "deviceToken" };
         for (String key : keys) {
             String value = call.getString(key);
             if (value == null || value.trim().isEmpty()) {
-                call.reject("Missing required field: " + key, "INVALID_LOCATION_SESSION");
+                call.reject("Missing required field: " + key, "INVALID_LOCATION_DEVICE");
                 return false;
             }
         }
         return true;
     }
 
+    private static void validateIngestUrl(String rawUrl) throws Exception {
+        URL url = new URL(rawUrl);
+        if (!"https".equalsIgnoreCase(url.getProtocol()) || !EXPECTED_HOST.equalsIgnoreCase(url.getHost()) || !EXPECTED_PATH.equals(url.getPath()) || url.getQuery() != null || url.getRef() != null) {
+            throw new IllegalArgumentException("Invalid location ingest URL");
+        }
+    }
+
     private String requireString(PluginCall call, String key) {
         String value = call.getString(key);
-        if (value == null || value.trim().isEmpty()) {
-            throw new IllegalArgumentException("Missing required field: " + key);
-        }
+        if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException("Missing required field: " + key);
         return value.trim();
     }
 }
