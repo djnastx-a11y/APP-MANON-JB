@@ -3,60 +3,70 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#020817" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Localisation · Nous Deux</title>
-  <link rel="stylesheet" href="app.css?v=14" />
-  <link rel="stylesheet" href="location.css?v=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynqzLO6n5RlnBsZJ7s2nQOVHl8tQ=" crossorigin="" />
+  <link rel="stylesheet" href="location.css?v=2" />
 </head>
 <body>
-  <main class="location-shell">
-    <header class="location-header">
-      <a class="back-link" href="index.html" aria-label="Retour">‹</a>
-      <div><div class="eyebrow">NOUS DEUX</div><h1>Localisation</h1></div>
-      <span id="liveBadge" class="live-badge off">En pause</span>
+  <main class="location-app">
+    <section id="map" class="live-map" aria-label="Carte de localisation de JB et Manon"></section>
+
+    <header class="map-topbar">
+      <a class="round-btn" href="index.html" aria-label="Retour à l’accueil">‹</a>
+      <div class="circle-pill"><span class="heart">♥</span><span><strong>Nous Deux</strong><small>JB & Manon</small></span></div>
+      <button class="round-btn" id="refreshLocationBtn" type="button" aria-label="Actualiser">↻</button>
     </header>
 
-    <section class="location-hero card">
-      <div>
-        <h2>Partage privé à deux</h2>
-        <p>Ta position n’est envoyée que lorsque tu actives le partage. Tu peux le couper immédiatement.</p>
+    <div class="map-tools" aria-label="Actions de carte">
+      <button class="map-tool" id="focusMeBtn" type="button"><span id="meMiniAvatar">J</span><small>Moi</small></button>
+      <button class="map-tool" id="focusPartnerBtn" type="button"><span class="partner" id="partnerMiniAvatar">M</span><small>Manon</small></button>
+    </div>
+
+    <section class="location-sheet" aria-label="Informations de localisation">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <div><span class="eyebrow">LOCALISATION PRIVÉE</span><h1>Vous deux</h1></div>
+        <span id="liveBadge" class="live-badge off">En pause</span>
       </div>
-      <label class="location-switch">
-        <input id="sharingToggle" type="checkbox" />
-        <span></span>
-      </label>
-    </section>
 
-    <div id="locationMessage" class="location-message" role="status" aria-live="polite"></div>
+      <div id="locationMessage" class="location-message" role="status" aria-live="polite"></div>
 
-    <section class="location-grid">
-      <article class="person-location card" id="meCard">
-        <div class="person-head"><span class="person-avatar" id="meAvatar">J</span><div><strong id="meName">Moi</strong><small>Ma position</small></div></div>
-        <div class="location-value" id="meStatus">Aucune position</div>
-        <div class="location-meta" id="meMeta"></div>
-        <a id="meMapLink" class="map-link hidden" target="_blank" rel="noopener">Ouvrir sur la carte</a>
-      </article>
+      <div class="members">
+        <article class="member-row" id="meCard">
+          <div class="member-avatar" id="meAvatar">J</div>
+          <div class="member-copy"><strong id="meName">JB</strong><span id="meStatus">Position non disponible</span><small id="meMeta"></small></div>
+          <a id="meMapLink" class="member-action hidden" target="_blank" rel="noopener" aria-label="Ouvrir ma position sur une carte">›</a>
+        </article>
 
-      <article class="person-location card" id="partnerCard">
-        <div class="person-head"><span class="person-avatar partner" id="partnerAvatar">M</span><div><strong id="partnerName">Manon</strong><small>Dernière position connue</small></div></div>
-        <div class="location-value" id="partnerStatus">Aucune position</div>
-        <div class="location-meta" id="partnerMeta"></div>
-        <a id="partnerMapLink" class="map-link hidden" target="_blank" rel="noopener">Ouvrir sur la carte</a>
-      </article>
-    </section>
+        <article class="member-row" id="partnerCard">
+          <div class="member-avatar partner" id="partnerAvatar">M</div>
+          <div class="member-copy"><strong id="partnerName">Manon</strong><span id="partnerStatus">Position non disponible</span><small id="partnerMeta"></small></div>
+          <a id="partnerMapLink" class="member-action hidden" target="_blank" rel="noopener" aria-label="Ouvrir la position de Manon sur une carte">›</a>
+        </article>
+      </div>
 
-    <section class="location-actions card">
-      <button class="primary" id="refreshLocationBtn" type="button">Actualiser</button>
-      <button class="secondary" id="centerOnMeBtn" type="button">Envoyer ma position maintenant</button>
-    </section>
+      <div class="sharing-card">
+        <div><strong>Partager ma position</strong><small>Visible uniquement par vous deux</small></div>
+        <label class="location-switch" aria-label="Activer ou désactiver le partage de position">
+          <input id="sharingToggle" type="checkbox" />
+          <span></span>
+        </label>
+      </div>
 
-    <section class="privacy-card card">
-      <strong>Confidentialité</strong>
-      <p>Le partage est volontaire et visible. Aucune localisation cachée n’est activée. Le suivi continu en arrière-plan sera géré par les versions mobiles Android et iPhone avec les permissions système dédiées.</p>
+      <div class="quick-actions">
+        <button id="centerOnMeBtn" type="button"><span>⌖</span><strong>Ma position</strong><small>Mettre à jour</small></button>
+        <button id="placesBtn" type="button"><span>⌂</span><strong>Lieux</strong><small>Maison, travail…</small></button>
+        <button id="historyBtn" type="button"><span>↺</span><strong>Historique</strong><small>Trajets récents</small></button>
+      </div>
+
+      <p class="privacy-line">Le partage est volontaire, visible et désactivable à tout moment.</p>
     </section>
   </main>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="config.js"></script>
-  <script type="module" src="location.js?v=1"></script>
+  <script type="module" src="location.js?v=2"></script>
 </body>
 </html>
