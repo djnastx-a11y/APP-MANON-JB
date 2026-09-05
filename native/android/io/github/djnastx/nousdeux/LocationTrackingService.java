@@ -29,26 +29,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class LocationTrackingService extends Service implements LocationListener {
     static final String ACTION_START = "io.github.djnastx.nousdeux.location.START";
-    static final String ACTION_STOP = "io.github.djnastx.nousdeux.location.STOP";
 
     private static final String TAG = "NousDeuxLocation";
     private static final String CHANNEL_ID = "nous_deux_location_tracking";
     private static final int NOTIFICATION_ID = 2401;
     private static final long MIN_LOCATION_INTERVAL_MS = 15_000L;
     private static final float MIN_LOCATION_DISTANCE_M = 10f;
-    private static final long MIN_CURRENT_UPLOAD_INTERVAL_MS = 10_000L;
-    private static final long HISTORY_INTERVAL_MS = 60_000L;
-    private static final float HISTORY_DISTANCE_M = 50f;
+    private static final long MIN_UPLOAD_INTERVAL_MS = 10_000L;
 
     private final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
     private final AtomicBoolean uploadInFlight = new AtomicBoolean(false);
-
     private LocationManager locationManager;
     private SupabaseLocationClient apiClient;
     private volatile Location pendingLocation;
-    private long lastCurrentUploadAt = 0L;
-    private long lastHistoryAt = 0L;
-    private Location lastHistoryLocation;
+    private long lastUploadAt = 0L;
     private boolean tracking = false;
 
     @Override
@@ -61,33 +55,21 @@ public final class LocationTrackingService extends Service implements LocationLi
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent == null ? ACTION_START : intent.getAction();
-        if (ACTION_STOP.equals(action)) {
-            stopTrackingAndSelf();
-            return START_NOT_STICKY;
-        }
-
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            buildNotification("Partage de position actif"),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-        );
+        ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification("Partage de position actif"), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
 
         if (!hasLocationPermission()) {
             Log.w(TAG, "Location permission missing; stopping service");
             stopTrackingAndSelf();
             return START_NOT_STICKY;
         }
-
         try {
             if (SecureSessionStore.load(this) == null) {
-                Log.w(TAG, "Native session missing; stopping service");
+                Log.w(TAG, "Location device credential missing; stopping service");
                 stopTrackingAndSelf();
                 return START_NOT_STICKY;
             }
         } catch (Exception error) {
-            Log.e(TAG, "Unable to read native session", error);
+            Log.e(TAG, "Unable to read location device credential", error);
             stopTrackingAndSelf();
             return START_NOT_STICKY;
         }
@@ -100,37 +82,22 @@ public final class LocationTrackingService extends Service implements LocationLi
         if (!hasLocationPermission()) return;
         tracking = true;
         boolean registered = false;
-
         try {
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    MIN_LOCATION_INTERVAL_MS,
-                    MIN_LOCATION_DISTANCE_M,
-                    this,
-                    Looper.getMainLooper()
-                );
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_LOCATION_INTERVAL_MS, MIN_LOCATION_DISTANCE_M, this, Looper.getMainLooper());
                 registered = true;
             }
         } catch (SecurityException error) {
             Log.e(TAG, "GPS registration rejected", error);
         }
-
         try {
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER,
-                    MIN_LOCATION_INTERVAL_MS,
-                    MIN_LOCATION_DISTANCE_M,
-                    this,
-                    Looper.getMainLooper()
-                );
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_LOCATION_INTERVAL_MS, MIN_LOCATION_DISTANCE_M, this, Looper.getMainLooper());
                 registered = true;
             }
         } catch (SecurityException error) {
             Log.e(TAG, "Network location registration rejected", error);
         }
-
         if (!registered) {
             Log.w(TAG, "No location provider available");
             updateNotification("GPS indisponible");
@@ -140,51 +107,31 @@ public final class LocationTrackingService extends Service implements LocationLi
     @Override
     public void onLocationChanged(Location location) {
         if (location == null) return;
-        long now = System.currentTimeMillis();
-        if (now - lastCurrentUploadAt < MIN_CURRENT_UPLOAD_INTERVAL_MS) {
+        if (System.currentTimeMillis() - lastUploadAt < MIN_UPLOAD_INTERVAL_MS) {
             pendingLocation = new Location(location);
             return;
         }
         queueUpload(new Location(location));
     }
 
-    @Override
-    public void onProviderEnabled(String provider) {
-        updateNotification("Partage de position actif");
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-        updateNotification("Recherche du GPS…");
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        // Deprecated by Android, retained for compatibility with LocationListener.
-    }
+    @Override public void onProviderEnabled(String provider) { updateNotification("Partage de position actif"); }
+    @Override public void onProviderDisabled(String provider) { updateNotification("Recherche du GPS…"); }
+    @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
 
     private void queueUpload(Location location) {
         pendingLocation = location;
         if (!uploadInFlight.compareAndSet(false, true)) return;
-
         networkExecutor.execute(() -> {
             try {
                 while (true) {
                     Location next = pendingLocation;
                     pendingLocation = null;
                     if (next == null) break;
-
                     long now = System.currentTimeMillis();
-                    if (now - lastCurrentUploadAt < MIN_CURRENT_UPLOAD_INTERVAL_MS) continue;
-
+                    if (now - lastUploadAt < MIN_UPLOAD_INTERVAL_MS) continue;
                     try {
-                        apiClient.sendCurrent(next);
-                        lastCurrentUploadAt = now;
-                        if (shouldWriteHistory(next, now)) {
-                            apiClient.sendHistory(next);
-                            lastHistoryAt = now;
-                            lastHistoryLocation = new Location(next);
-                        }
+                        apiClient.send(next);
+                        lastUploadAt = now;
                         updateNotification("Position synchronisée");
                     } catch (Exception error) {
                         Log.e(TAG, "Location upload failed", error);
@@ -198,12 +145,6 @@ public final class LocationTrackingService extends Service implements LocationLi
         });
     }
 
-    private boolean shouldWriteHistory(Location location, long now) {
-        if (lastHistoryLocation == null) return true;
-        if (now - lastHistoryAt >= HISTORY_INTERVAL_MS) return true;
-        return lastHistoryLocation.distanceTo(location) >= HISTORY_DISTANCE_M;
-    }
-
     private boolean hasLocationPermission() {
         return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
@@ -211,10 +152,7 @@ public final class LocationTrackingService extends Service implements LocationLi
 
     private void stopTrackingAndSelf() {
         tracking = false;
-        try {
-            if (locationManager != null) locationManager.removeUpdates(this);
-        } catch (SecurityException ignored) {
-        }
+        try { if (locationManager != null) locationManager.removeUpdates(this); } catch (SecurityException ignored) { }
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
@@ -223,11 +161,7 @@ public final class LocationTrackingService extends Service implements LocationLi
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (manager == null) return;
-        NotificationChannel channel = new NotificationChannel(
-            CHANNEL_ID,
-            "Localisation Nous Deux",
-            NotificationManager.IMPORTANCE_LOW
-        );
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Localisation Nous Deux", NotificationManager.IMPORTANCE_LOW);
         channel.setDescription("Indique quand le partage de position en arrière-plan est actif.");
         channel.setShowBadge(false);
         manager.createNotificationChannel(channel);
@@ -236,13 +170,7 @@ public final class LocationTrackingService extends Service implements LocationLi
     private Notification buildNotification(String text) {
         Intent launchIntent = new Intent(this, MainActivity.class);
         launchIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this,
-            2401,
-            launchIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 2401, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentTitle("Nous Deux · Localisation")
@@ -263,17 +191,10 @@ public final class LocationTrackingService extends Service implements LocationLi
     @Override
     public void onDestroy() {
         tracking = false;
-        try {
-            if (locationManager != null) locationManager.removeUpdates(this);
-        } catch (SecurityException ignored) {
-        }
+        try { if (locationManager != null) locationManager.removeUpdates(this); } catch (SecurityException ignored) { }
         networkExecutor.shutdownNow();
         super.onDestroy();
     }
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
+    @Nullable @Override public IBinder onBind(Intent intent) { return null; }
 }
