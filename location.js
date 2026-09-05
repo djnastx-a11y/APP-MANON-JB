@@ -1,4 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import * as maplibregl from "https://unpkg.com/maplibre-gl@6.7.0/dist/maplibre-gl.mjs";
 
 const cfg = window.APP_CONFIG || {};
 const msg = document.getElementById("locationMessage");
@@ -6,6 +7,11 @@ const sharingToggle = document.getElementById("sharingToggle");
 const liveBadge = document.getElementById("liveBadge");
 const refreshBtn = document.getElementById("refreshLocationBtn");
 const sendNowBtn = document.getElementById("centerOnMeBtn");
+const fitBothBtn = document.getElementById("fitBothBtn");
+const focusMeBtn = document.getElementById("focusMeBtn");
+const focusPartnerBtn = document.getElementById("focusPartnerBtn");
+const meMapLink = document.getElementById("meMapLink");
+const partnerMapLink = document.getElementById("partnerMapLink");
 
 let supabase = null;
 let currentUser = null;
@@ -15,6 +21,10 @@ let sharingEnabled = false;
 let lastPersistedAt = 0;
 let lastPersistedPoint = null;
 let lastPositions = [];
+let map = null;
+let mapReady = false;
+let meMarker = null;
+let partnerMarker = null;
 
 function setMessage(text, error = false) {
   msg.textContent = text || "";
@@ -37,13 +47,7 @@ function formatAge(iso) {
   if (min < 60) return `il y a ${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `il y a ${h} h`;
-  const d = Math.floor(h / 24);
-  return `il y a ${d} j`;
-}
-
-function mapUrl(lat, lng) {
-  const z = 16;
-  return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lng)}#map=${z}/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`;
+  return `il y a ${Math.floor(h / 24)} j`;
 }
 
 function haversineMeters(a, b) {
@@ -58,24 +62,125 @@ function haversineMeters(a, b) {
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 
-function displayNames() {
+function currentNames() {
   const mine = currentUser?.user_metadata?.display_name || currentUser?.email?.split("@")[0] || "Moi";
   const partner = mine.toLowerCase().includes("manon") ? "JB" : "Manon";
+  return { mine, partner };
+}
+
+function displayNames() {
+  const { mine, partner } = currentNames();
+  const mineInitial = mine.slice(0, 1).toUpperCase();
+  const partnerInitial = partner.slice(0, 1).toUpperCase();
   document.getElementById("meName").textContent = mine;
-  document.getElementById("meAvatar").textContent = mine.slice(0, 1).toUpperCase();
+  document.getElementById("meAvatar").textContent = mineInitial;
   document.getElementById("partnerName").textContent = partner;
-  document.getElementById("partnerAvatar").textContent = partner.slice(0, 1).toUpperCase();
+  document.getElementById("partnerAvatar").textContent = partnerInitial;
+  document.getElementById("mapMeName").textContent = mine;
+  document.getElementById("mapMeAvatar").textContent = mineInitial;
+  document.getElementById("mapPartnerName").textContent = partner;
+  document.getElementById("mapPartnerAvatar").textContent = partnerInitial;
+}
+
+function initMap() {
+  if (map) return;
+  map = new maplibregl.Map({
+    container: "liveMap",
+    style: "https://tiles.openfreemap.org/styles/positron",
+    center: [-3.36, 47.75],
+    zoom: 11.5,
+    attributionControl: true,
+    cooperativeGestures: false
+  });
+  map.dragRotate.disable();
+  map.touchZoomRotate.disableRotation();
+  map.on("load", () => {
+    mapReady = true;
+    syncMap(true);
+  });
+}
+
+function makeMarker(kind, initial) {
+  const el = document.createElement("div");
+  el.className = `map-person-marker ${kind}`;
+  el.textContent = initial;
+  return el;
+}
+
+function getRows() {
+  const me = lastPositions.find(r => r.user_id === currentUser?.id) || null;
+  const partner = lastPositions.find(r => r.user_id !== currentUser?.id) || null;
+  return { me, partner };
+}
+
+function upsertMarker(marker, row, kind, initial) {
+  if (!mapReady || !row) {
+    if (marker) marker.remove();
+    return null;
+  }
+  const lngLat = [Number(row.longitude), Number(row.latitude)];
+  if (!marker) {
+    marker = new maplibregl.Marker({ element: makeMarker(kind, initial), anchor: "center" })
+      .setLngLat(lngLat)
+      .addTo(map);
+  } else {
+    marker.setLngLat(lngLat);
+  }
+  return marker;
+}
+
+function focusRow(row, zoom = 16) {
+  if (!mapReady || !row) return;
+  map.easeTo({
+    center: [Number(row.longitude), Number(row.latitude)],
+    zoom,
+    duration: 650,
+    essential: true
+  });
+  document.querySelector(".map-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function fitBoth() {
+  if (!mapReady) return;
+  const { me, partner } = getRows();
+  const rows = [me, partner].filter(Boolean);
+  if (!rows.length) return;
+  if (rows.length === 1) {
+    focusRow(rows[0], 16);
+    return;
+  }
+  const bounds = new maplibregl.LngLatBounds();
+  rows.forEach(row => bounds.extend([Number(row.longitude), Number(row.latitude)]));
+  map.fitBounds(bounds, {
+    padding: { top: 100, right: 55, bottom: 110, left: 55 },
+    maxZoom: 16,
+    duration: 700
+  });
+}
+
+function syncMap(fit = false) {
+  if (!mapReady || !currentUser) return;
+  const { mine, partner: partnerName } = currentNames();
+  const { me, partner } = getRows();
+  meMarker = upsertMarker(meMarker, me, "me", mine.slice(0, 1).toUpperCase());
+  partnerMarker = upsertMarker(partnerMarker, partner, "partner", partnerName.slice(0, 1).toUpperCase());
+  const subtitle = document.getElementById("mapSubtitle");
+  if (subtitle) {
+    if (me && partner) subtitle.textContent = "Vous êtes tous les deux visibles";
+    else if (me || partner) subtitle.textContent = "1 position disponible";
+    else subtitle.textContent = "Aucune position disponible";
+  }
+  if (fit) fitBoth();
 }
 
 function paintPosition(cardPrefix, row) {
   const status = document.getElementById(`${cardPrefix}Status`);
   const meta = document.getElementById(`${cardPrefix}Meta`);
-  const link = document.getElementById(`${cardPrefix}MapLink`);
+  const button = document.getElementById(`${cardPrefix}MapLink`);
   if (!row) {
     status.textContent = "Aucune position";
     meta.textContent = "";
-    link.classList.add("hidden");
-    link.removeAttribute("href");
+    button.classList.add("hidden");
     return;
   }
   status.textContent = `${Number(row.latitude).toFixed(5)}, ${Number(row.longitude).toFixed(5)}`;
@@ -85,19 +190,18 @@ function paintPosition(cardPrefix, row) {
   if (Number.isFinite(accuracy)) parts.push(`précision ±${Math.round(accuracy)} m`);
   if (Number.isFinite(speed) && speed > 0.5) parts.push(`${Math.round(speed * 3.6)} km/h`);
   meta.textContent = parts.filter(Boolean).join(" · ");
-  link.href = mapUrl(row.latitude, row.longitude);
-  link.classList.remove("hidden");
+  button.classList.remove("hidden");
 }
 
-function renderPositions(rows = lastPositions) {
+function renderPositions(rows = lastPositions, fit = false) {
   lastPositions = Array.isArray(rows) ? rows : [];
-  const me = lastPositions.find(r => r.user_id === currentUser?.id) || null;
-  const partner = lastPositions.find(r => r.user_id !== currentUser?.id) || null;
+  const { me, partner } = getRows();
   paintPosition("me", me);
   paintPosition("partner", partner);
+  syncMap(fit);
 }
 
-async function loadPositions() {
+async function loadPositions(fit = false) {
   if (!supabase || !currentUser) return;
   const { data, error } = await supabase
     .from("current_locations")
@@ -107,7 +211,7 @@ async function loadPositions() {
     setMessage("Impossible de charger les positions.", true);
     return;
   }
-  renderPositions(data || []);
+  renderPositions(data || [], fit);
 }
 
 async function loadSharingPreference() {
@@ -167,6 +271,7 @@ async function persistPosition(position, forceHistory = false) {
     lastPersistedAt = Date.now();
     lastPersistedPoint = point;
   }
+  await loadPositions(false);
   setMessage("Position synchronisée.");
 }
 
@@ -252,7 +357,7 @@ async function setupRealtime() {
   if (realtimeChannel) await supabase.removeChannel(realtimeChannel);
   realtimeChannel = supabase
     .channel("couple-live-location")
-    .on("postgres_changes", { event: "*", schema: "public", table: "current_locations" }, () => loadPositions())
+    .on("postgres_changes", { event: "*", schema: "public", table: "current_locations" }, () => loadPositions(false))
     .subscribe();
 }
 
@@ -263,6 +368,7 @@ async function init() {
     return;
   }
 
+  initMap();
   supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session?.user) {
@@ -272,7 +378,7 @@ async function init() {
 
   currentUser = data.session.user;
   displayNames();
-  await loadPositions();
+  await loadPositions(true);
   const resumeSharing = await loadSharingPreference();
   await setupRealtime();
 
@@ -285,14 +391,22 @@ async function init() {
       setMessage("Impossible d’enregistrer la pause du partage.", true);
     });
   });
-  refreshBtn.addEventListener("click", () => loadPositions().catch(error => {
+
+  refreshBtn.addEventListener("click", () => loadPositions(true).catch(error => {
     console.error("load positions failed", error);
     setMessage("Impossible de charger les positions.", true);
   }));
   sendNowBtn.addEventListener("click", sendCurrentPositionNow);
+  fitBothBtn?.addEventListener("click", fitBoth);
+  focusMeBtn?.addEventListener("click", () => focusRow(getRows().me));
+  focusPartnerBtn?.addEventListener("click", () => focusRow(getRows().partner));
+  meMapLink?.addEventListener("click", () => focusRow(getRows().me));
+  partnerMapLink?.addEventListener("click", () => focusRow(getRows().partner));
+
   window.addEventListener("beforeunload", () => {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    if (map) map.remove();
   });
 }
 
