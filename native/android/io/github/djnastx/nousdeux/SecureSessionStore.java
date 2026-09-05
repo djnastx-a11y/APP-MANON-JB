@@ -7,9 +7,11 @@ import android.util.Base64;
 
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.security.KeyStore;
 
 import javax.crypto.Cipher;
@@ -60,18 +62,20 @@ final class SecureSessionStore {
 
         File target = getFile(context);
         File temp = new File(target.getParentFile(), target.getName() + ".tmp");
-        Files.write(temp.toPath(), envelope.toString().getBytes(StandardCharsets.UTF_8));
-        if (!temp.renameTo(target)) {
-            Files.deleteIfExists(target.toPath());
-            if (!temp.renameTo(target)) throw new IllegalStateException("Unable to persist encrypted session");
+        try (FileOutputStream out = new FileOutputStream(temp, false)) {
+            out.write(envelope.toString().getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            out.getFD().sync();
         }
+        if (target.exists() && !target.delete()) throw new IllegalStateException("Unable to replace encrypted session");
+        if (!temp.renameTo(target)) throw new IllegalStateException("Unable to persist encrypted session");
     }
 
     static synchronized Session load(Context context) throws Exception {
         File file = getFile(context);
         if (!file.exists()) return null;
 
-        String raw = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        String raw = new String(readAllBytes(file), StandardCharsets.UTF_8);
         JSONObject envelope = new JSONObject(raw);
         if (envelope.optInt("v", 0) != 1) throw new IllegalStateException("Unsupported session format");
 
@@ -92,9 +96,16 @@ final class SecureSessionStore {
     }
 
     static synchronized void clear(Context context) {
-        try {
-            Files.deleteIfExists(getFile(context).toPath());
-        } catch (Exception ignored) {
+        File file = getFile(context);
+        if (file.exists()) file.delete();
+    }
+
+    private static byte[] readAllBytes(File file) throws Exception {
+        try (FileInputStream in = new FileInputStream(file); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            return out.toByteArray();
         }
     }
 
