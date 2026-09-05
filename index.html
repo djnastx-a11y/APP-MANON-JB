@@ -11,6 +11,9 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="app.css?v=14" />
+  <style>
+    .location-launch{display:flex;align-items:center;gap:14px;margin:12px 0;padding:16px;text-decoration:none;color:inherit;background:linear-gradient(135deg,#10233d,#0d1828);border:1px solid #2a4568}.location-launch-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:#2377ee;color:#fff;font-size:24px;flex:0 0 auto}.location-launch-copy{min-width:0;flex:1}.location-launch-copy strong,.location-launch-copy small{display:block}.location-launch-copy strong{font-size:16px}.location-launch-copy small{margin-top:4px;color:#91a5bd}.location-launch-arrow{font-size:25px;color:#77b4ff}.bottom-nav .location-nav{text-decoration:none}.bottom-nav .location-nav .nav-icon{stroke:#70b7ff}.bottom-nav .location-nav .nav-label{color:#70b7ff}@media(max-width:390px){.bottom-nav .nav-label{font-size:9px}.bottom-nav .nav-item{min-width:0;padding-left:3px;padding-right:3px}}
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -42,6 +45,12 @@
           <button class="stat" data-jump="house"><span id="homeCount">0</span><small>Maison</small></button>
         </div>
         <div class="notification-nudge" id="notificationNudge" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span><strong>Ne manquez rien</strong><small>Recevez les messages et les nouveautés de l’autre.</small></span><button id="nudgeNotificationBtn">Activer</button></div>
+
+        <a class="location-launch card" href="location.html" aria-label="Ouvrir la localisation en direct">
+          <span class="location-launch-icon">⌖</span>
+          <span class="location-launch-copy"><strong>Localisation en direct</strong><small>Voir JB et Manon sur la carte</small></span>
+          <span class="location-launch-arrow">›</span>
+        </a>
 
         <div class="section-head"><h3>Aujourd’hui</h3><button class="ghost" data-jump="planning">Voir le planning</button></div>
         <div id="todayFeed" class="stack today-feed"></div>
@@ -147,6 +156,7 @@
     <nav class="bottom-nav" aria-label="Navigation principale">
       <button class="nav-item active" data-screen-target="home"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span class="nav-label">Accueil</span></button>
       <button class="nav-item" data-screen-target="planning"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg><span class="nav-label">Planning</span></button>
+      <a class="nav-item location-nav" href="location.html" aria-label="Localisation"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg><span class="nav-label">Localisation</span></a>
       <button class="nav-item center-nav" data-screen-target="us"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><span class="nav-label">Nous</span></button>
       <button class="nav-item" data-screen-target="lists"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span class="nav-label">Listes</span></button>
       <button class="nav-item" data-screen-target="house"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span class="nav-label">Maison</span></button>
