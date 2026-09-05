@@ -21,43 +21,33 @@ import javax.crypto.spec.GCMParameterSpec;
 
 final class SecureSessionStore {
     private static final String ANDROID_KEYSTORE = "AndroidKeyStore";
-    private static final String KEY_ALIAS = "nous_deux_location_session_v1";
-    private static final String FILE_NAME = "location_session_v1.json.enc";
+    private static final String KEY_ALIAS = "nous_deux_location_device_v2";
+    private static final String FILE_NAME = "location_device_v2.json.enc";
 
     private SecureSessionStore() {}
 
     static final class Session {
-        final String supabaseUrl;
-        final String publishableKey;
-        final String accessToken;
-        final String refreshToken;
-        final String userId;
+        final String ingestUrl;
+        final String deviceToken;
 
-        Session(String supabaseUrl, String publishableKey, String accessToken, String refreshToken, String userId) {
-            this.supabaseUrl = supabaseUrl;
-            this.publishableKey = publishableKey;
-            this.accessToken = accessToken;
-            this.refreshToken = refreshToken;
-            this.userId = userId;
+        Session(String ingestUrl, String deviceToken) {
+            this.ingestUrl = ingestUrl;
+            this.deviceToken = deviceToken;
         }
     }
 
     static synchronized void save(Context context, Session session) throws Exception {
         JSONObject payload = new JSONObject();
-        payload.put("supabaseUrl", session.supabaseUrl);
-        payload.put("publishableKey", session.publishableKey);
-        payload.put("accessToken", session.accessToken);
-        payload.put("refreshToken", session.refreshToken);
-        payload.put("userId", session.userId);
+        payload.put("ingestUrl", session.ingestUrl);
+        payload.put("deviceToken", session.deviceToken);
 
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey());
-        byte[] iv = cipher.getIV();
         byte[] encrypted = cipher.doFinal(payload.toString().getBytes(StandardCharsets.UTF_8));
 
         JSONObject envelope = new JSONObject();
-        envelope.put("v", 1);
-        envelope.put("iv", Base64.encodeToString(iv, Base64.NO_WRAP));
+        envelope.put("v", 2);
+        envelope.put("iv", Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP));
         envelope.put("data", Base64.encodeToString(encrypted, Base64.NO_WRAP));
 
         File target = getFile(context);
@@ -67,32 +57,24 @@ final class SecureSessionStore {
             out.flush();
             out.getFD().sync();
         }
-        if (target.exists() && !target.delete()) throw new IllegalStateException("Unable to replace encrypted session");
-        if (!temp.renameTo(target)) throw new IllegalStateException("Unable to persist encrypted session");
+        if (target.exists() && !target.delete()) throw new IllegalStateException("Unable to replace encrypted device credential");
+        if (!temp.renameTo(target)) throw new IllegalStateException("Unable to persist encrypted device credential");
     }
 
     static synchronized Session load(Context context) throws Exception {
         File file = getFile(context);
         if (!file.exists()) return null;
 
-        String raw = new String(readAllBytes(file), StandardCharsets.UTF_8);
-        JSONObject envelope = new JSONObject(raw);
-        if (envelope.optInt("v", 0) != 1) throw new IllegalStateException("Unsupported session format");
+        JSONObject envelope = new JSONObject(new String(readAllBytes(file), StandardCharsets.UTF_8));
+        if (envelope.optInt("v", 0) != 2) throw new IllegalStateException("Unsupported device credential format");
 
         byte[] iv = Base64.decode(envelope.getString("iv"), Base64.NO_WRAP);
         byte[] encrypted = Base64.decode(envelope.getString("data"), Base64.NO_WRAP);
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), new GCMParameterSpec(128, iv));
-        String json = new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
-        JSONObject payload = new JSONObject(json);
+        JSONObject payload = new JSONObject(new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8));
 
-        return new Session(
-            payload.getString("supabaseUrl"),
-            payload.getString("publishableKey"),
-            payload.getString("accessToken"),
-            payload.getString("refreshToken"),
-            payload.getString("userId")
-        );
+        return new Session(payload.getString("ingestUrl"), payload.getString("deviceToken"));
     }
 
     static synchronized void clear(Context context) {
@@ -117,20 +99,17 @@ final class SecureSessionStore {
         KeyStore keyStore = KeyStore.getInstance(ANDROID_KEYSTORE);
         keyStore.load(null);
         KeyStore.Entry entry = keyStore.getEntry(KEY_ALIAS, null);
-        if (entry instanceof KeyStore.SecretKeyEntry) {
-            return ((KeyStore.SecretKeyEntry) entry).getSecretKey();
-        }
+        if (entry instanceof KeyStore.SecretKeyEntry) return ((KeyStore.SecretKeyEntry) entry).getSecretKey();
 
         KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE);
-        KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
+        generator.init(new KeyGenParameterSpec.Builder(
             KEY_ALIAS,
             KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setRandomizedEncryptionRequired(true)
-            .build();
-        generator.init(spec);
+            .build());
         return generator.generateKey();
     }
 }
