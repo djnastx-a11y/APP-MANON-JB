@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -20,6 +21,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.ServiceCompat;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -65,7 +67,13 @@ public final class LocationTrackingService extends Service implements LocationLi
             return START_NOT_STICKY;
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification("Partage de position actif"));
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            buildNotification("Partage de position actif"),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        );
+
         if (!hasLocationPermission()) {
             Log.w(TAG, "Location permission missing; stopping service");
             stopTrackingAndSelf();
@@ -207,7 +215,7 @@ public final class LocationTrackingService extends Service implements LocationLi
             if (locationManager != null) locationManager.removeUpdates(this);
         } catch (SecurityException ignored) {
         }
-        stopForeground(STOP_FOREGROUND_REMOVE);
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
 
