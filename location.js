@@ -65,7 +65,6 @@ function displayNames() {
   document.getElementById("meAvatar").textContent = mine.slice(0, 1).toUpperCase();
   document.getElementById("partnerName").textContent = partner;
   document.getElementById("partnerAvatar").textContent = partner.slice(0, 1).toUpperCase();
-  return { mine, partner };
 }
 
 function paintPosition(cardPrefix, row) {
@@ -81,8 +80,10 @@ function paintPosition(cardPrefix, row) {
   }
   status.textContent = `${Number(row.latitude).toFixed(5)}, ${Number(row.longitude).toFixed(5)}`;
   const parts = [formatAge(row.captured_at)];
-  if (Number.isFinite(row.accuracy_m)) parts.push(`précision ±${Math.round(row.accuracy_m)} m`);
-  if (Number.isFinite(row.speed_mps) && row.speed_mps > 0.5) parts.push(`${Math.round(row.speed_mps * 3.6)} km/h`);
+  const accuracy = Number(row.accuracy_m);
+  const speed = Number(row.speed_mps);
+  if (Number.isFinite(accuracy)) parts.push(`précision ±${Math.round(accuracy)} m`);
+  if (Number.isFinite(speed) && speed > 0.5) parts.push(`${Math.round(speed * 3.6)} km/h`);
   meta.textContent = parts.filter(Boolean).join(" · ");
   link.href = mapUrl(row.latitude, row.longitude);
   link.classList.remove("hidden");
@@ -177,36 +178,6 @@ function geoErrorText(error) {
   return "Erreur de localisation.";
 }
 
-async function startSharing() {
-  if (!("geolocation" in navigator)) {
-    setLiveUi(false);
-    setMessage("Ce navigateur ne fournit pas la géolocalisation.", true);
-    return;
-  }
-  try {
-    await saveSharingPreference(true);
-    setLiveUi(true);
-    setMessage("Activation de la localisation…");
-    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-    watchId = navigator.geolocation.watchPosition(
-      p => persistPosition(p).catch(err => {
-        console.error("location persist failed", err);
-        setMessage("La position n’a pas pu être synchronisée.", true);
-      }),
-      async error => {
-        console.warn("geolocation failed", error);
-        setMessage(geoErrorText(error), true);
-        await stopSharing(false).catch(() => {});
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-    );
-  } catch (error) {
-    console.error("start sharing failed", error);
-    setLiveUi(false);
-    setMessage("Impossible d’activer le partage.", true);
-  }
-}
-
 async function stopSharing(updateRemote = true) {
   if (watchId !== null) {
     navigator.geolocation.clearWatch(watchId);
@@ -214,7 +185,47 @@ async function stopSharing(updateRemote = true) {
   }
   if (updateRemote && currentUser) await saveSharingPreference(false);
   setLiveUi(false);
-  setMessage("Partage mis en pause.");
+}
+
+async function startSharing() {
+  if (!("geolocation" in navigator)) {
+    try { await stopSharing(true); } catch (_) { setLiveUi(false); }
+    setMessage("Ce navigateur ne fournit pas la géolocalisation.", true);
+    return;
+  }
+
+  setMessage("Vérification de la localisation…");
+  navigator.geolocation.getCurrentPosition(
+    async firstPosition => {
+      try {
+        await saveSharingPreference(true);
+        setLiveUi(true);
+        await persistPosition(firstPosition, true);
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        watchId = navigator.geolocation.watchPosition(
+          p => persistPosition(p).catch(err => {
+            console.error("location persist failed", err);
+            setMessage("La position n’a pas pu être synchronisée.", true);
+          }),
+          async error => {
+            console.warn("geolocation failed", error);
+            try { await stopSharing(true); } catch (_) { setLiveUi(false); }
+            setMessage(geoErrorText(error), true);
+          },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+        );
+      } catch (error) {
+        console.error("start sharing failed", error);
+        try { await stopSharing(true); } catch (_) { setLiveUi(false); }
+        setMessage("Impossible d’activer le partage.", true);
+      }
+    },
+    async error => {
+      try { await stopSharing(true); } catch (_) { setLiveUi(false); }
+      setMessage(geoErrorText(error), true);
+    },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+  );
 }
 
 function sendCurrentPositionNow() {
@@ -269,12 +280,15 @@ async function init() {
 
   sharingToggle.addEventListener("change", () => {
     if (sharingToggle.checked) startSharing();
-    else stopSharing().catch(error => {
+    else stopSharing(true).then(() => setMessage("Partage mis en pause.")).catch(error => {
       console.error("stop sharing failed", error);
       setMessage("Impossible d’enregistrer la pause du partage.", true);
     });
   });
-  refreshBtn.addEventListener("click", loadPositions);
+  refreshBtn.addEventListener("click", () => loadPositions().catch(error => {
+    console.error("load positions failed", error);
+    setMessage("Impossible de charger les positions.", true);
+  }));
   sendNowBtn.addEventListener("click", sendCurrentPositionNow);
   window.addEventListener("beforeunload", () => {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
