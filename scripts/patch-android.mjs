@@ -5,6 +5,7 @@ const packagePath = join('android', 'app', 'src', 'main', 'java', 'io', 'github'
 const nativeSourcePath = join('native', 'android', 'io', 'github', 'djnastx', 'nousdeux');
 const manifestPath = join('android', 'app', 'src', 'main', 'AndroidManifest.xml');
 const mainActivityPath = join(packagePath, 'MainActivity.java');
+const buildGradlePath = join('android', 'app', 'build.gradle');
 
 const nativeFiles = [
   'SecureSessionStore.java',
@@ -15,6 +16,7 @@ const nativeFiles = [
 
 await access(manifestPath);
 await access(mainActivityPath);
+await access(buildGradlePath);
 await mkdir(packagePath, { recursive: true });
 
 for (const file of nativeFiles) {
@@ -79,4 +81,23 @@ if (!manifest.includes('android:name=".LocationTrackingService"')) {
 manifest = manifest.replace('android:allowBackup="true"', 'android:allowBackup="false"');
 await writeFile(manifestPath, manifest, 'utf8');
 
-console.log('Applied native Android location bridge, permissions and foreground service declaration');
+let buildGradle = await readFile(buildGradlePath, 'utf8');
+if (!buildGradle.includes('android {') || !buildGradle.includes('buildTypes {')) {
+  throw new Error('Unexpected Capacitor app/build.gradle template; refusing unsafe signing patch');
+}
+
+if (!buildGradle.includes('nous-deux-explicit-debug-signing')) {
+  buildGradle = buildGradle.replace(
+    'android {',
+    `android {\n    // nous-deux-explicit-debug-signing\n    signingConfigs {\n        debug {\n            storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")\n            storePassword "android"\n            keyAlias "androiddebugkey"\n            keyPassword "android"\n        }\n    }`
+  );
+
+  buildGradle = buildGradle.replace(
+    'buildTypes {',
+    `buildTypes {\n        debug {\n            signingConfig signingConfigs.debug\n        }`
+  );
+}
+
+await writeFile(buildGradlePath, buildGradle, 'utf8');
+
+console.log('Applied native Android bridge and explicit persistent debug signing configuration');
