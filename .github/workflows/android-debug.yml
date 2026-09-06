@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      EXPECTED_DEBUG_CERT_SHA256: ed3542e228048066c9a39dcd4d54c596b891ba7ea5282ac29c3e3394c33fc214
+      EXPECTED_DEBUG_CERT_SHA256: 7658e3ee8add1c498be7cffe25d23d11b5f83d3aa480c4da57c171cefc77a7bb
 
     steps:
       - name: Checkout
