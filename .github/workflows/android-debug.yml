@@ -82,11 +82,14 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
+      - name: Prepare branded APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk NOUS-DEUX.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: nous-deux-android-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: NOUS-DEUX-android
+          path: NOUS-DEUX.apk
           if-no-files-found: error
           retention-days: 14
 
