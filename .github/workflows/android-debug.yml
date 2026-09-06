@@ -40,6 +40,27 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Restore persistent Android debug keystore
+        id: debug-keystore-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: nous-deux-android-debug-keystore-v1
+
+      - name: Create Android debug keystore once
+        if: steps.debug-keystore-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair \
+            -keystore ~/.android/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Install pinned dependencies
         run: npm install --ignore-scripts
 
