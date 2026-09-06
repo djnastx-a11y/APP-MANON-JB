@@ -24,6 +24,8 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      EXPECTED_DEBUG_CERT_SHA256: ed3542e228048066c9a39dcd4d54c596b891ba7ea5282ac29c3e3394c33fc214
 
     steps:
       - name: Checkout
@@ -61,6 +63,12 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
+      - name: Verify persistent signing key identity
+        run: |
+          ACTUAL_CERT=$(keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | sed -n 's/.*SHA256: //p' | tr -d ':' | tr '[:upper:]' '[:lower:]')
+          echo "Keystore certificate SHA-256: $ACTUAL_CERT"
+          test "$ACTUAL_CERT" = "$EXPECTED_DEBUG_CERT_SHA256"
+
       - name: Install pinned dependencies
         run: npm install --ignore-scripts
 
@@ -81,6 +89,15 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
+
+      - name: Verify APK signer matches persistent key
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs android/app/build/outputs/apk/debug/app-debug.apk
+          APK_CERT=$("$APKSIGNER" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk | sed -n 's/Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]')
+          echo "APK certificate SHA-256: $APK_CERT"
+          test "$APK_CERT" = "$EXPECTED_DEBUG_CERT_SHA256"
 
       - name: Prepare branded APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk NOUS-DEUX.apk
