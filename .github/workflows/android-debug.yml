@@ -13,6 +13,7 @@ on:
       - 'app.js'
       - 'app.css'
       - 'config.js'
+      - 'service-worker.js'
       - 'location.*'
       - '.github/workflows/android-debug.yml'
   workflow_dispatch:
@@ -94,9 +95,11 @@ jobs:
         run: |
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs android/app/build/outputs/apk/debug/app-debug.apk
-          APK_CERT=$("$APKSIGNER" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk | sed -n 's/Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]')
+          SIGNER_OUTPUT=$("$APKSIGNER" verify --verbose --print-certs android/app/build/outputs/apk/debug/app-debug.apk)
+          echo "$SIGNER_OUTPUT"
+          APK_CERT=$(printf '%s\n' "$SIGNER_OUTPUT" | grep -m1 'certificate SHA-256 digest:' | sed 's/.*certificate SHA-256 digest: //' | tr '[:upper:]' '[:lower:]')
           echo "APK certificate SHA-256: $APK_CERT"
+          test -n "$APK_CERT"
           test "$APK_CERT" = "$EXPECTED_DEBUG_CERT_SHA256"
 
       - name: Prepare branded APK
