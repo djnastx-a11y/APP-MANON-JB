@@ -2,75 +2,74 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f4f7fb" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#f5f7fb" />
   <title>Localisation · Nous Deux</title>
-  <link rel="stylesheet" href="app.css?v=14" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.7.0/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="location.css?v=2" />
+  <link rel="stylesheet" href="location.css?v=3" />
 </head>
 <body>
-  <main class="location-shell">
-    <header class="location-header">
-      <a class="back-link" href="index.html" aria-label="Retour">‹</a>
-      <div><div class="eyebrow">NOUS DEUX</div><h1>Localisation</h1></div>
+  <main class="map-screen">
+    <div id="liveMap" class="live-map" aria-label="Carte de localisation en direct"></div>
+
+    <header class="map-header">
+      <a class="round-action back" href="index.html" aria-label="Retour">‹</a>
+      <button id="fitBothBtn" class="couple-pill" type="button" aria-label="Voir JB et Manon">
+        <span class="mini-avatar me" id="mapMeAvatar">J</span>
+        <span class="mini-avatar partner" id="mapPartnerAvatar">M</span>
+        <span class="couple-copy"><strong>Nous deux</strong><small id="mapSubtitle">Dernières positions connues</small></span>
+      </button>
       <span id="liveBadge" class="live-badge off">En pause</span>
     </header>
 
-    <section class="map-card" aria-label="Carte de localisation en direct">
-      <div id="liveMap" class="live-map"></div>
-      <div class="map-gradient"></div>
-      <div class="map-topbar">
-        <div class="map-title"><strong>Nous deux</strong><span id="mapSubtitle">Dernières positions connues</span></div>
-        <button id="fitBothBtn" class="map-round-btn" type="button" aria-label="Voir nos deux positions">◎</button>
+    <div class="map-controls" aria-label="Contrôles de carte">
+      <button id="focusMeBtn" class="round-action" type="button" aria-label="Me recentrer">⌖</button>
+      <button id="focusPartnerBtn" class="round-action partner-action" type="button" aria-label="Voir Manon">M</button>
+    </div>
+
+    <section class="bottom-sheet" aria-label="Informations de localisation">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div>
+          <span class="eyebrow">LOCALISATION EN DIRECT</span>
+          <h1>JB &amp; Manon</h1>
+        </div>
+        <label class="location-switch" aria-label="Partager ma position">
+          <input id="sharingToggle" type="checkbox" />
+          <span></span>
+        </label>
       </div>
-      <div class="map-bottom-sheet">
-        <button id="focusMeBtn" class="person-chip me" type="button"><span id="mapMeAvatar">J</span><b id="mapMeName">Moi</b></button>
-        <button id="focusPartnerBtn" class="person-chip partner" type="button"><span id="mapPartnerAvatar">M</span><b id="mapPartnerName">Manon</b></button>
+
+      <div id="locationMessage" class="location-message" role="status" aria-live="polite"></div>
+
+      <div class="people-row">
+        <button id="meMapLink" class="person-card hidden" type="button">
+          <span class="person-avatar me" id="meAvatar">J</span>
+          <span class="person-copy"><strong id="meName">JB</strong><small>Ma position</small><b id="meStatus">Aucune position</b><em id="meMeta"></em></span>
+        </button>
+
+        <button id="partnerMapLink" class="person-card hidden" type="button">
+          <span class="person-avatar partner" id="partnerAvatar">M</span>
+          <span class="person-copy"><strong id="partnerName">Manon</strong><small>Dernière position connue</small><b id="partnerStatus">Aucune position</b><em id="partnerMeta"></em></span>
+        </button>
       </div>
-    </section>
 
-    <section class="location-hero card">
-      <div>
-        <h2>Partage privé à deux</h2>
-        <p>Ta position n’est envoyée que lorsque tu actives le partage. Tu peux le couper immédiatement.</p>
+      <div class="quick-actions">
+        <button class="primary" id="centerOnMeBtn" type="button">Actualiser ma position</button>
+        <button class="secondary" id="refreshLocationBtn" type="button">Actualiser la carte</button>
       </div>
-      <label class="location-switch">
-        <input id="sharingToggle" type="checkbox" />
-        <span></span>
-      </label>
-    </section>
 
-    <div id="locationMessage" class="location-message" role="status" aria-live="polite"></div>
+      <div class="place-strip" aria-label="Lieux favoris">
+        <span class="place-chip">⌂ Maison</span>
+        <span class="place-chip">★ Favoris</span>
+        <span class="place-chip muted">Zones &amp; alertes bientôt</span>
+      </div>
 
-    <section class="location-grid">
-      <article class="person-location card" id="meCard">
-        <div class="person-head"><span class="person-avatar" id="meAvatar">J</span><div><strong id="meName">Moi</strong><small>Ma position</small></div></div>
-        <div class="location-value" id="meStatus">Aucune position</div>
-        <div class="location-meta" id="meMeta"></div>
-        <button id="meMapLink" class="map-link hidden" type="button">Voir sur la carte</button>
-      </article>
-
-      <article class="person-location card" id="partnerCard">
-        <div class="person-head"><span class="person-avatar partner" id="partnerAvatar">M</span><div><strong id="partnerName">Manon</strong><small>Dernière position connue</small></div></div>
-        <div class="location-value" id="partnerStatus">Aucune position</div>
-        <div class="location-meta" id="partnerMeta"></div>
-        <button id="partnerMapLink" class="map-link hidden" type="button">Voir sur la carte</button>
-      </article>
-    </section>
-
-    <section class="location-actions card">
-      <button class="primary" id="refreshLocationBtn" type="button">Actualiser</button>
-      <button class="secondary" id="centerOnMeBtn" type="button">Envoyer ma position maintenant</button>
-    </section>
-
-    <section class="privacy-card card">
-      <strong>Confidentialité</strong>
-      <p>Le partage est volontaire et visible. Aucune localisation cachée n’est activée.</p>
+      <p class="privacy-note">Partage volontaire et visible. Tu peux le couper à tout moment.</p>
     </section>
   </main>
 
   <script src="config.js"></script>
-  <script type="module" src="location.js?v=2"></script>
+  <script type="module" src="location.js?v=3"></script>
 </body>
 </html>
