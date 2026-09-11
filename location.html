@@ -7,27 +7,35 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Localisation · Nous Deux</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynqzLO6n5RlnBsZJ7s2nQOVHl8tQ=" crossorigin="" />
-  <link rel="stylesheet" href="location.css?v=2" />
+  <link rel="stylesheet" href="location.css?v=4" />
 </head>
 <body>
   <main class="location-app">
-    <section id="map" class="live-map" aria-label="Carte de localisation de JB et Manon"></section>
+    <section id="map" class="live-map" aria-label="Carte en direct de JB et Manon"></section>
 
     <header class="map-topbar">
       <a class="round-btn" href="index.html" aria-label="Retour à l’accueil">‹</a>
-      <div class="circle-pill"><span class="heart">♥</span><span><strong>Nous Deux</strong><small>JB & Manon</small></span></div>
+      <div class="circle-pill">
+        <span class="heart">♥</span>
+        <span class="circle-copy"><strong>Nous Deux</strong><small id="mapSubtitle">JB & Manon</small></span>
+        <span id="distanceChip" class="distance-chip hidden"></span>
+      </div>
       <button class="round-btn" id="refreshLocationBtn" type="button" aria-label="Actualiser">↻</button>
     </header>
 
     <div class="map-tools" aria-label="Actions de carte">
       <button class="map-tool" id="focusMeBtn" type="button"><span id="meMiniAvatar">J</span><small>Moi</small></button>
       <button class="map-tool" id="focusPartnerBtn" type="button"><span class="partner" id="partnerMiniAvatar">M</span><small>Manon</small></button>
+      <button class="map-tool" id="fitBothBtn" type="button"><span class="both">◎</span><small>Nous 2</small></button>
     </div>
 
     <section class="location-sheet" aria-label="Informations de localisation">
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-head">
-        <div><span class="eyebrow">LOCALISATION PRIVÉE</span><h1>Vous deux</h1></div>
+        <div>
+          <span class="eyebrow">LOCALISATION PRIVÉE</span>
+          <h1>En direct</h1>
+        </div>
         <span id="liveBadge" class="live-badge off">En pause</span>
       </div>
 
@@ -36,14 +44,22 @@
       <div class="members">
         <article class="member-row" id="meCard">
           <div class="member-avatar" id="meAvatar">J</div>
-          <div class="member-copy"><strong id="meName">JB</strong><span id="meStatus">Position non disponible</span><small id="meMeta"></small></div>
-          <a id="meMapLink" class="member-action hidden" target="_blank" rel="noopener" aria-label="Ouvrir ma position sur une carte">›</a>
+          <div class="member-copy">
+            <strong id="meName">JB</strong>
+            <span id="meStatus">Position non disponible</span>
+            <small id="meMeta"></small>
+          </div>
+          <button id="meMapLink" class="member-action hidden" type="button" aria-label="Centrer la carte sur ma position">Voir</button>
         </article>
 
         <article class="member-row" id="partnerCard">
           <div class="member-avatar partner" id="partnerAvatar">M</div>
-          <div class="member-copy"><strong id="partnerName">Manon</strong><span id="partnerStatus">Position non disponible</span><small id="partnerMeta"></small></div>
-          <a id="partnerMapLink" class="member-action hidden" target="_blank" rel="noopener" aria-label="Ouvrir la position de Manon sur une carte">›</a>
+          <div class="member-copy">
+            <strong id="partnerName">Manon</strong>
+            <span id="partnerStatus">Position non disponible</span>
+            <small id="partnerMeta"></small>
+          </div>
+          <button id="partnerMapLink" class="member-action hidden" type="button" aria-label="Centrer la carte sur la position de Manon">Voir</button>
         </article>
       </div>
 
@@ -56,17 +72,17 @@
       </div>
 
       <div class="quick-actions">
-        <button id="centerOnMeBtn" type="button"><span>⌖</span><strong>Ma position</strong><small>Mettre à jour</small></button>
-        <button id="placesBtn" type="button"><span>⌂</span><strong>Lieux</strong><small>Maison, travail…</small></button>
+        <button id="centerOnMeBtn" type="button"><span>⌖</span><strong>Actualiser</strong><small>Ma position</small></button>
+        <button id="placesBtn" type="button"><span>⌂</span><strong>Lieux</strong><small>Maison, travail</small></button>
         <button id="historyBtn" type="button"><span>↺</span><strong>Historique</strong><small>Trajets récents</small></button>
       </div>
 
-      <p class="privacy-line">Le partage est volontaire, visible et désactivable à tout moment.</p>
+      <p class="privacy-line">Le partage est volontaire et peut être coupé à tout moment.</p>
     </section>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="config.js"></script>
-  <script type="module" src="location.js?v=2"></script>
+  <script type="module" src="location.js?v=4"></script>
 </body>
 </html>
