@@ -1,5 +1,5 @@
-const CACHE="nous-deux-v15";
-const ASSETS=["./","./index.html","./app.css?v=14","./app.js?v=14","./manifest.json","./icon.svg","./config.js","./location.html","./location.css?v=4","./location.js?v=4"];
+const CACHE="nous-deux-v16";
+const ASSETS=["./","./index.html","./app.css?v=14","./app.js?v=14","./manifest.json","./icon.svg","./config.js","./location.html","./location.css?v=6","./location.js?v=6"];
 
 self.addEventListener("install",event=>{
   self.skipWaiting();
@@ -7,37 +7,24 @@ self.addEventListener("install",event=>{
 });
 
 self.addEventListener("activate",event=>{
-  event.waitUntil(
-    caches.keys()
-      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
-      .then(()=>self.clients.claim())
-  );
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
 });
 
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET")return;
-  event.respondWith(
-    fetch(event.request,{cache:"no-store"})
-      .then(response=>{
-        if(response.ok&&new URL(event.request.url).origin===self.location.origin){
-          const copy=response.clone();
-          caches.open(CACHE).then(cache=>cache.put(event.request,copy));
-        }
-        return response;
-      })
-      .catch(()=>caches.match(event.request).then(cached=>cached||caches.match("./index.html")))
-  );
+  event.respondWith(fetch(event.request,{cache:"no-store"}).then(response=>{
+    if(response.ok&&new URL(event.request.url).origin===self.location.origin){
+      const copy=response.clone();
+      caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+    }
+    return response;
+  }).catch(()=>caches.match(event.request).then(cached=>cached||caches.match("./index.html"))));
 });
 
 self.addEventListener("push",event=>{
   let data={title:"Nous Deux",body:"Nouvelle activité partagée",url:"/APP-MANON-JB/"};
   try{if(event.data)data={...data,...event.data.json()}}catch{}
-  event.waitUntil(self.registration.showNotification(data.title,{
-    body:data.body,
-    tag:"nous-deux-"+Date.now(),
-    data:{url:data.url},
-    vibrate:[120,60,120]
-  }));
+  event.waitUntil(self.registration.showNotification(data.title,{body:data.body,tag:"nous-deux-"+Date.now(),data:{url:data.url},vibrate:[120,60,120]}));
 });
 
 self.addEventListener("notificationclick",event=>{
