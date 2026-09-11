@@ -3,86 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#07111f" />
+  <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Localisation · Nous Deux</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynqzLO6n5RlnBsZJ7s2nQOVHl8tQ=" crossorigin="" />
-  <link rel="stylesheet" href="location.css?v=4" />
+  <link rel="stylesheet" href="location.css?v=6" />
 </head>
 <body>
-  <main class="location-app">
-    <section id="map" class="live-map" aria-label="Carte en direct de JB et Manon"></section>
+  <main class="life-screen">
+    <section id="map" class="life-map" aria-label="Carte de localisation de JB et Manon"></section>
 
-    <header class="map-topbar">
-      <a class="round-btn" href="index.html" aria-label="Retour à l’accueil">‹</a>
-      <div class="circle-pill">
-        <span class="heart">♥</span>
-        <span class="circle-copy"><strong>Nous Deux</strong><small id="mapSubtitle">JB & Manon</small></span>
-        <span id="distanceChip" class="distance-chip hidden"></span>
-      </div>
-      <button class="round-btn" id="refreshLocationBtn" type="button" aria-label="Actualiser">↻</button>
-    </header>
-
-    <div class="map-tools" aria-label="Actions de carte">
-      <button class="map-tool" id="focusMeBtn" type="button"><span id="meMiniAvatar">J</span><small>Moi</small></button>
-      <button class="map-tool" id="focusPartnerBtn" type="button"><span class="partner" id="partnerMiniAvatar">M</span><small>Manon</small></button>
-      <button class="map-tool" id="fitBothBtn" type="button"><span class="both">◎</span><small>Nous 2</small></button>
+    <div class="top-ui">
+      <button id="settingsBtn" class="round-fab settings-fab" type="button" aria-label="Réglages"><span class="gear">⚙</span><i class="notif-dot"></i></button>
+      <button id="familyBtn" class="family-pill" type="button" aria-label="Famille Ridau"><span>Famille Ridau</span><b>▾</b></button>
+      <button id="inboxBtn" class="round-fab inbox-fab" type="button" aria-label="Messages"><span>✉</span><i class="count-badge">1</i></button>
+      <button id="chatBtn" class="round-fab chat-fab" type="button" aria-label="Discussion">•••</button>
     </div>
 
-    <section class="location-sheet" aria-label="Informations de localisation">
-      <div class="sheet-handle" aria-hidden="true"></div>
-      <div class="sheet-head">
-        <div>
-          <span class="eyebrow">LOCALISATION PRIVÉE</span>
-          <h1>En direct</h1>
-        </div>
-        <span id="liveBadge" class="live-badge off">En pause</span>
-      </div>
+    <div class="right-tools">
+      <button id="centerOnMeBtn" class="map-circle target-btn" type="button" aria-label="Se localiser">◎</button>
+      <button id="layersBtn" class="map-circle layers-btn" type="button" aria-label="Couches de carte">▱</button>
+    </div>
 
-      <div id="locationMessage" class="location-message" role="status" aria-live="polite"></div>
-
-      <div class="members">
-        <article class="member-row" id="meCard">
-          <div class="member-avatar" id="meAvatar">J</div>
-          <div class="member-copy">
-            <strong id="meName">JB</strong>
-            <span id="meStatus">Position non disponible</span>
-            <small id="meMeta"></small>
-          </div>
-          <button id="meMapLink" class="member-action hidden" type="button" aria-label="Centrer la carte sur ma position">Voir</button>
-        </article>
-
-        <article class="member-row" id="partnerCard">
-          <div class="member-avatar partner" id="partnerAvatar">M</div>
-          <div class="member-copy">
-            <strong id="partnerName">Manon</strong>
-            <span id="partnerStatus">Position non disponible</span>
-            <small id="partnerMeta"></small>
-          </div>
-          <button id="partnerMapLink" class="member-action hidden" type="button" aria-label="Centrer la carte sur la position de Manon">Voir</button>
-        </article>
-      </div>
-
-      <div class="sharing-card">
-        <div><strong>Partager ma position</strong><small>Visible uniquement par vous deux</small></div>
-        <label class="location-switch" aria-label="Activer ou désactiver le partage de position">
-          <input id="sharingToggle" type="checkbox" />
-          <span></span>
-        </label>
-      </div>
-
-      <div class="quick-actions">
-        <button id="centerOnMeBtn" type="button"><span>⌖</span><strong>Actualiser</strong><small>Ma position</small></button>
-        <button id="placesBtn" type="button"><span>⌂</span><strong>Lieux</strong><small>Maison, travail</small></button>
-        <button id="historyBtn" type="button"><span>↺</span><strong>Historique</strong><small>Trajets récents</small></button>
-      </div>
-
-      <p class="privacy-line">Le partage est volontaire et peut être coupé à tout moment.</p>
+    <section id="partnerBubble" class="arrival-card hidden" aria-live="polite">
+      <div class="arrival-title"><span>🏡</span><strong id="partnerEventText">Manon est arrivé(e)</strong></div>
+      <div id="partnerEventTime" class="arrival-time">À l’instant</div>
     </section>
+
+    <div id="locationMessage" class="toast-message" role="status" aria-live="polite"></div>
+
+    <div class="action-pills">
+      <button id="locatePill" class="white-pill" type="button"><span class="purple-icon">◆</span>Se localiser</button>
+      <button id="sosBtn" class="white-pill" type="button"><span class="purple-icon">◉</span>Configurer le SOS</button>
+    </div>
+
+    <section class="bottom-card">
+      <div class="sheet-handle"></div>
+      <div class="status-card">
+        <div class="status-title">JB & Manon</div>
+        <div class="status-line"><span id="liveBadge" class="live-dot">●</span><span id="statusSummary">Localisation privée à deux</span></div>
+        <div class="status-actions"><label class="share-switch"><input id="sharingToggle" type="checkbox" /><span></span></label><span id="shareLabel">Partage désactivé</span></div>
+      </div>
+    </section>
+
+    <nav class="bottom-nav" aria-label="Navigation localisation">
+      <button class="nav-item active" id="navLocation" type="button"><span class="nav-icon">⌖</span><strong>Localisation</strong></button>
+      <button class="nav-item" id="navDrive" type="button"><span class="nav-icon">▣</span><strong>Au volant</strong></button>
+      <button class="nav-item" id="navSafety" type="button"><span class="nav-icon">◇</span><strong>Sécurité</strong></button>
+      <button class="nav-item" id="navAccount" type="button"><span class="nav-icon">☆</span><strong>Abonnement</strong></button>
+    </nav>
+
+    <div class="hidden-compat" aria-hidden="true">
+      <button id="refreshLocationBtn" type="button"></button><button id="focusMeBtn" type="button"></button><button id="focusPartnerBtn" type="button"></button><button id="fitBothBtn" type="button"></button><button id="placesBtn" type="button"></button><button id="historyBtn" type="button"></button><button id="meMapLink" type="button"></button><button id="partnerMapLink" type="button"></button>
+      <span id="distanceChip"></span><span id="mapSubtitle"></span><span id="meName">JB</span><span id="partnerName">Manon</span><span id="meAvatar">J</span><span id="partnerAvatar">M</span><span id="meMiniAvatar">J</span><span id="partnerMiniAvatar">M</span><span id="meStatus"></span><span id="partnerStatus"></span><span id="meMeta"></span><span id="partnerMeta"></span><div id="meCard"></div><div id="partnerCard"></div>
+    </div>
   </main>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="config.js"></script>
-  <script type="module" src="location.js?v=4"></script>
+  <script type="module" src="location.js?v=6"></script>
 </body>
 </html>
