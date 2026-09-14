@@ -5,11 +5,11 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId 'com.nastx.nousdeux'
+        applicationId 'com.nastx.nousdeux.live'
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName '1.1.1'
+        versionCode 4
+        versionName '1.1.2'
     }
 
     signingConfigs {
