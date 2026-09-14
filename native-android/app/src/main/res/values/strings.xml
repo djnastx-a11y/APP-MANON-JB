@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Nous Deux</string>
+    <string name="tracking_channel">Localisation en direct</string>
+    <string name="tracking_notification">Partage de position actif avec Famille Ridau</string>
+    <string name="crash_channel">Sécurité</string>
+</resources>
