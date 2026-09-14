@@ -88,7 +88,7 @@
     <section id="safetyPanel" class="full-panel hidden" aria-label="Sécurité">
       <div class="full-panel-head"><h2>Sécurité</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
       <button id="safetySosCard" class="feature-card danger" type="button"><span class="feature-badge">SOS</span><span><strong>Alerte silencieuse</strong><small>Partage ta position avec ton cercle et tes contacts d’urgence.</small></span><b>›</b></button>
-      <button class="feature-card" type="button" id="crashCard"><span class="feature-badge">AUTO</span><span><strong>Détection d’accident</strong><small>Nécessite la future version native Android/iPhone pour fonctionner en permanence.</small></span><b>›</b></button>
+      <button class="feature-card" type="button" id="crashCard"><span class="feature-badge">AUTO</span><span><strong>Détection d’accident</strong><small>Sur Android natif, un impact important déclenche un délai de sécurité avant l’alerte au cercle.</small></span><b>›</b></button>
       <button class="feature-card" type="button" id="batteryCard"><span class="feature-badge">BAT</span><span><strong>Batterie des membres</strong><small id="batteryText">Disponible lorsqu’un appareil transmet son état.</small></span><b>›</b></button>
     </section>
 
@@ -117,5 +117,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="config.js"></script>
   <script type="module" src="location.js?v=17"></script>
+  <script type="module" src="native-bridge.js?v=1"></script>
 </body>
 </html>
