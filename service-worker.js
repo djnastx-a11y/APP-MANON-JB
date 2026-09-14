@@ -1,4 +1,4 @@
-const CACHE="nous-deux-v19";
+const CACHE="nous-deux-v20";
 const ASSETS=["./","./index.html","./app.css?v=14","./app.js?v=14","./manifest.json","./icon.svg","./config.js","./location.html","./leaflet-fallback.css?v=1","./location.css?v=19","./native-bridge.js?v=3","./location.js?v=19"];
 
 self.addEventListener("install",event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));});
