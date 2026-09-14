@@ -30,6 +30,8 @@
   class VectorMap {
     constructor(container) {
       this.styleIndex = 0;
+      this.liveMarker = null;
+      this.liveMarkerEl = null;
       this.map = new maplibregl.Map({
         container,
         style: STYLE_LIGHT,
@@ -38,9 +40,10 @@
         attributionControl: true,
         pitchWithRotate: false,
         dragRotate: false,
-        maxPitch: 0,
+        maxPitch: 55,
         fadeDuration: 0
       });
+      window.__nousDeuxVectorMap = this;
       this.map.touchZoomRotate.disableRotation();
       this.map.on('load', () => {
         try {
@@ -51,12 +54,42 @@
     }
     setView(latlng, zoom, options = {}) {
       const action = options.animate === false ? 'jumpTo' : 'easeTo';
-      this.map[action]({ center: toLngLat(latlng), zoom, duration: options.animate === false ? 0 : 550 });
+      this.map[action]({ center: toLngLat(latlng), zoom, bearing: 0, pitch: 0, duration: options.animate === false ? 0 : 550 });
+      return this;
+    }
+    showLiveUser(latlng, heading = null, speedMps = 0) {
+      if (!this.liveMarker) {
+        const el = document.createElement('div');
+        el.setAttribute('aria-label', 'Ma position en direct');
+        el.style.cssText = 'width:38px;height:38px;border-radius:50%;background:#7357f4;border:4px solid #fff;box-shadow:0 4px 16px rgba(46,36,64,.34),0 0 0 3px rgba(115,87,244,.20);display:grid;place-items:center;color:#fff;font-size:17px;font-weight:900;transition:transform .18s linear;';
+        el.innerHTML = '<span style="transform:translateY(-1px)">▲</span>';
+        this.liveMarkerEl = el;
+        this.liveMarker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(toLngLat(latlng)).addTo(this.map);
+      } else {
+        this.liveMarker.setLngLat(toLngLat(latlng));
+      }
+      const speed = Number(speedMps) || 0;
+      if (this.liveMarkerEl) this.liveMarkerEl.style.opacity = speed >= 0 ? '1' : '.85';
+      return this;
+    }
+    followLocation(latlng, heading = null, speedMps = 0) {
+      const speed = Number(speedMps) || 0;
+      const moving = speed >= 2;
+      const bearing = Number.isFinite(Number(heading)) && Number(heading) >= 0 ? Number(heading) : this.map.getBearing();
+      this.map.easeTo({
+        center: toLngLat(latlng),
+        zoom: moving ? 17.2 : 16.2,
+        bearing: moving ? bearing : 0,
+        pitch: moving ? 46 : 0,
+        offset: moving ? [0, 105] : [0, 30],
+        duration: moving ? 800 : 500,
+        essential: true
+      });
       return this;
     }
     fitBounds(bounds, options = {}) {
       const b = bounds instanceof Bounds ? bounds.asMapLibre() : bounds;
-      this.map.fitBounds(b, { padding: { top: 120, right: 58, bottom: 330, left: 38 }, maxZoom: options.maxZoom || 16.5, duration: options.animate === false ? 0 : 650 });
+      this.map.fitBounds(b, { padding: { top: 120, right: 58, bottom: 330, left: 38 }, maxZoom: options.maxZoom || 16.5, duration: options.animate === false ? 0 : 650, bearing: 0, pitch: 0 });
       return this;
     }
     invalidateSize() { this.map.resize(); return this; }

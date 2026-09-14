@@ -8,6 +8,7 @@
   let ready = false;
   let sharingEnabled = false;
   let rows = [];
+  let pendingNativeDetail = null;
   let pollTimer = null;
   let realtimeChannel = null;
   const fakeWatches = new Map();
@@ -20,6 +21,7 @@
     .native-onboarding-icon{width:48px;height:48px;border-radius:15px;background:#f0ecff;color:#7a5af8;display:grid;place-items:center;font-size:25px;margin-bottom:12px}
     .native-onboarding-card h2{margin:0 0 7px;font-size:20px;color:#292330}.native-onboarding-card p{margin:0 0 15px;color:#777080;font-size:13px;line-height:1.45}
     .native-onboarding-card button{width:100%;height:50px;border:0;border-radius:16px;background:#7a5af8;color:#fff;font-weight:800;font-size:14px}.native-onboarding-card small{display:block;text-align:center;color:#918a99;margin-top:9px;font-size:10px}
+    body.native-live-map .person-pin:not(.partner){opacity:0!important;pointer-events:none!important}
   `;
   document.head.appendChild(style);
 
@@ -40,11 +42,19 @@
         accuracy: Number.isFinite(Number(row.accuracy_m)) ? Number(row.accuracy_m) : 25,
         altitude: Number.isFinite(Number(row.altitude_m)) ? Number(row.altitude_m) : null,
         altitudeAccuracy: null,
-        heading: Number.isFinite(Number(row.heading_deg)) ? Number(row.heading_deg) : null,
-        speed: Number.isFinite(Number(row.speed_mps)) ? Number(row.speed_mps) : null
+        heading: Number.isFinite(Number(row.heading_deg)) && Number(row.heading_deg) >= 0 ? Number(row.heading_deg) : null,
+        speed: Number.isFinite(Number(row.speed_mps)) && Number(row.speed_mps) >= 0 ? Number(row.speed_mps) : null
       },
       timestamp: new Date(row.captured_at || Date.now()).getTime()
     };
+  }
+
+  function emitWatch(watch, row) {
+    if (!watch || !row) return;
+    const key = String(row.captured_at || '');
+    if (key && key === watch.last) return;
+    watch.last = key;
+    try { watch.success(syntheticPosition(row)); } catch {}
   }
 
   function installGeolocationShim() {
@@ -66,26 +76,16 @@
 
     geo.watchPosition = success => {
       const id = fakeWatchSeq--;
-      let last = '';
-      const tick = () => {
-        const row = selfRow();
-        if (!row) return;
-        const key = String(row.captured_at || '');
-        if (key && key === last) return;
-        last = key;
-        success(syntheticPosition(row));
-      };
-      tick();
-      const timer = setInterval(tick, 2500);
-      fakeWatches.set(id, timer);
+      const watch = { success, last: '' };
+      fakeWatches.set(id, watch);
+      const row = selfRow();
+      if (row) emitWatch(watch, row);
       return id;
     };
 
     geo.clearWatch = id => {
-      if (fakeWatches.has(id)) {
-        clearInterval(fakeWatches.get(id));
-        fakeWatches.delete(id);
-      } else if (originalClear) originalClear(id);
+      if (fakeWatches.has(id)) fakeWatches.delete(id);
+      else if (originalClear) originalClear(id);
     };
     geo.__nousDeuxNativeShim = true;
   }
@@ -112,12 +112,67 @@
     setTimeout(() => node.classList.remove('show'), 2600);
   }
 
+  function driveMapWith(row) {
+    const vectorMap = window.__nousDeuxVectorMap;
+    if (!vectorMap || !row) return;
+    const latlng = [Number(row.latitude), Number(row.longitude)];
+    const heading = Number(row.heading_deg);
+    const speed = Number(row.speed_mps) || 0;
+    document.body.classList.add('native-live-map');
+    try { vectorMap.showLiveUser?.(latlng, heading, speed); } catch {}
+    if (speed >= 1.5) {
+      try { vectorMap.followLocation?.(latlng, heading, speed); } catch {}
+    }
+  }
+
+  function applyNativeDetail(detail) {
+    if (!detail) return;
+    if (!session?.user?.id) {
+      pendingNativeDetail = detail;
+      return;
+    }
+    const latitude = Number(detail.latitude);
+    const longitude = Number(detail.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    const row = {
+      user_id: session.user.id,
+      latitude,
+      longitude,
+      accuracy_m: Number(detail.accuracy) >= 0 ? Number(detail.accuracy) : null,
+      speed_mps: Number(detail.speed) >= 0 ? Number(detail.speed) : null,
+      heading_deg: Number(detail.bearing) >= 0 ? Number(detail.bearing) : null,
+      source: 'android_native_live',
+      captured_at: new Date(Number(detail.time) || Date.now()).toISOString(),
+      received_at: new Date().toISOString()
+    };
+    const index = rows.findIndex(item => item.user_id === row.user_id);
+    if (index >= 0) rows[index] = row;
+    else rows.unshift(row);
+    driveMapWith(row);
+    fakeWatches.forEach(watch => emitWatch(watch, row));
+    window.dispatchEvent(new CustomEvent('nousdeux:nativeRow', { detail: row }));
+  }
+
+  window.addEventListener('nousdeux:nativeLocation', event => applyNativeDetail(event.detail));
+
   async function loadRows() {
     if (!client || !session) return;
+    const localSelf = selfRow();
     const { data, error } = await client.from('current_locations')
-      .select('user_id,latitude,longitude,accuracy_m,altitude_m,speed_mps,heading_deg,captured_at,received_at')
+      .select('user_id,latitude,longitude,accuracy_m,altitude_m,speed_mps,heading_deg,source,captured_at,received_at')
       .order('captured_at', { ascending: false });
-    if (!error) rows = Array.isArray(data) ? data : [];
+    if (error) return;
+    rows = Array.isArray(data) ? data : [];
+    if (localSelf) {
+      const remoteIndex = rows.findIndex(row => row.user_id === localSelf.user_id);
+      const remote = remoteIndex >= 0 ? rows[remoteIndex] : null;
+      const localTime = new Date(localSelf.captured_at || 0).getTime();
+      const remoteTime = new Date(remote?.captured_at || 0).getTime();
+      if (!remote || localTime > remoteTime) {
+        if (remoteIndex >= 0) rows[remoteIndex] = localSelf;
+        else rows.unshift(localSelf);
+      }
+    }
   }
 
   async function savePreference(enabled) {
@@ -149,6 +204,7 @@
   async function stopNative() {
     try { await savePreference(false); } catch {}
     try { window.NativeTracking.stop(); } catch {}
+    document.body.classList.remove('native-live-map');
     setUi(false);
     toast('Partage de position arrêté.');
   }
@@ -178,6 +234,11 @@
       const { data, error } = await client.auth.getSession();
       if (error || !data.session) return;
       session = data.session;
+      if (pendingNativeDetail) {
+        const pending = pendingNativeDetail;
+        pendingNativeDetail = null;
+        applyNativeDetail(pending);
+      }
       await loadRows();
       const pref = await client.from('location_sharing_preferences').select('sharing_enabled').eq('user_id', session.user.id).maybeSingle();
       ready = true;
