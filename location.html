@@ -3,24 +3,119 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#f6f7f8" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>Localisation · Nous Deux</title>
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynqzLO6n5RlnBsZJ7s2nQOVHl8tQ=" crossorigin="" />
-  <link rel="stylesheet" href="location.css?v=6" />
+  <link rel="stylesheet" href="location.css?v=17" />
 </head>
 <body>
   <main class="life-screen">
-    <section id="map" class="life-map" aria-label="Carte de localisation de JB et Manon"></section>
-    <div class="top-ui"><button id="settingsBtn" class="round-fab settings-fab" type="button" aria-label="Réglages"><span class="gear">⚙</span><i class="notif-dot"></i></button><button id="familyBtn" class="family-pill" type="button" aria-label="Famille Ridau"><span>Famille Ridau</span><b>▾</b></button><button id="inboxBtn" class="round-fab inbox-fab" type="button" aria-label="Messages"><span>✉</span><i class="count-badge">1</i></button><button id="chatBtn" class="round-fab chat-fab" type="button" aria-label="Discussion">•••</button></div>
-    <div class="right-tools"><button id="centerOnMeBtn" class="map-circle target-btn" type="button" aria-label="Se localiser">◎</button><button id="layersBtn" class="map-circle layers-btn" type="button" aria-label="Couches de carte">▱</button></div>
-    <section id="partnerBubble" class="arrival-card hidden" aria-live="polite"><div class="arrival-title"><span>🏡</span><strong id="partnerEventText">Manon est arrivé(e)</strong></div><div id="partnerEventTime" class="arrival-time">À l’instant</div></section>
-    <div id="locationMessage" class="toast-message" role="status" aria-live="polite"></div>
-    <div class="action-pills"><button id="locatePill" class="white-pill" type="button"><span class="purple-icon">◆</span>Se localiser</button><button id="sosBtn" class="white-pill" type="button"><span class="purple-icon">◉</span>Configurer le SOS</button></div>
-    <section class="bottom-card"><div class="sheet-handle"></div><div class="status-card"><div class="status-title">JB & Manon</div><div class="status-line"><span id="liveBadge" class="live-dot">●</span><span id="statusSummary">Localisation privée à deux</span></div><div class="status-actions"><label class="share-switch"><input id="sharingToggle" type="checkbox" /><span></span></label><span id="shareLabel">Partage désactivé</span></div></div></section>
-    <nav class="bottom-nav" aria-label="Navigation localisation"><button class="nav-item active" id="navLocation" type="button"><span class="nav-icon">⌖</span><strong>Localisation</strong></button><button class="nav-item" id="navDrive" type="button"><span class="nav-icon">▣</span><strong>Au volant</strong></button><button class="nav-item" id="navSafety" type="button"><span class="nav-icon">◇</span><strong>Sécurité</strong></button><button class="nav-item" id="navAccount" type="button"><span class="nav-icon">☆</span><strong>Abonnement</strong></button></nav>
-    <div class="hidden-compat" aria-hidden="true"><button id="refreshLocationBtn" type="button"></button><button id="focusMeBtn" type="button"></button><button id="focusPartnerBtn" type="button"></button><button id="fitBothBtn" type="button"></button><button id="placesBtn" type="button"></button><button id="historyBtn" type="button"></button><button id="meMapLink" type="button"></button><button id="partnerMapLink" type="button"></button><span id="distanceChip"></span><span id="mapSubtitle"></span><span id="meName">JB</span><span id="partnerName">Manon</span><span id="meAvatar">J</span><span id="partnerAvatar">M</span><span id="meMiniAvatar">J</span><span id="partnerMiniAvatar">M</span><span id="meStatus"></span><span id="partnerStatus"></span><span id="meMeta"></span><span id="partnerMeta"></span><div id="meCard"></div><div id="partnerCard"></div></div>
+    <section id="map" class="life-map" aria-label="Carte de localisation en direct"></section>
+
+    <header class="map-header">
+      <button id="settingsBtn" class="circle-button" type="button" aria-label="Réglages">⚙</button>
+      <button id="familyBtn" class="circle-selector" type="button" aria-label="Choisir le cercle">
+        <span id="circleName">Famille Ridau</span><span class="chevron">⌄</span>
+      </button>
+      <button id="inboxBtn" class="circle-button" type="button" aria-label="Messages">✉<span class="notification-dot"></span></button>
+    </header>
+
+    <aside class="map-tools">
+      <button id="centerOnMeBtn" class="map-tool" type="button" aria-label="Recentrer sur moi">◎</button>
+      <button id="fitBothBtn" class="map-tool" type="button" aria-label="Voir tout le monde">⌖</button>
+      <button id="layersBtn" class="map-tool" type="button" aria-label="Changer de carte">▱</button>
+    </aside>
+
+    <div id="locationMessage" class="toast" role="status" aria-live="polite"></div>
+
+    <section id="memberCallout" class="member-callout hidden" aria-live="polite">
+      <strong id="memberCalloutName">Manon</strong>
+      <span id="memberCalloutStatus">À l’instant</span>
+    </section>
+
+    <section class="quick-actions" aria-label="Actions rapides">
+      <button id="checkInBtn" class="quick-pill" type="button"><span>⌖</span>Check-in</button>
+      <button id="placesBtn" class="quick-pill" type="button"><span>●</span>Lieux</button>
+      <button id="sosBtn" class="quick-pill sos" type="button"><span>◉</span>SOS</button>
+    </section>
+
+    <section id="memberSheet" class="member-sheet" aria-label="Membres du cercle">
+      <div class="sheet-grabber"></div>
+      <div class="sheet-title-row">
+        <div>
+          <strong id="sheetTitle">Famille Ridau</strong>
+          <span id="sheetSubtitle">2 membres</span>
+        </div>
+        <label class="share-control">
+          <input id="sharingToggle" type="checkbox" />
+          <span></span>
+          <small id="shareLabel">Partage désactivé</small>
+        </label>
+      </div>
+      <div id="membersRail" class="members-rail"></div>
+      <button id="historyBtn" class="history-entry" type="button">
+        <span class="history-icon">⌁</span>
+        <span><strong>Historique</strong><small id="historySummary">Voir les déplacements du jour</small></span>
+        <b>›</b>
+      </button>
+    </section>
+
+    <section id="panelBackdrop" class="panel-backdrop hidden"></section>
+
+    <section id="placesPanel" class="drawer hidden" aria-label="Lieux">
+      <div class="drawer-head"><button class="drawer-close" data-close-drawer type="button">×</button><h2>Lieux</h2><button id="addPlaceBtn" class="drawer-action" type="button">Ajouter</button></div>
+      <p class="drawer-copy">Reçois une alerte quand un membre arrive ou quitte un lieu enregistré.</p>
+      <div id="placesList" class="drawer-list"></div>
+    </section>
+
+    <section id="historyPanel" class="drawer hidden" aria-label="Historique">
+      <div class="drawer-head"><button class="drawer-close" data-close-drawer type="button">×</button><h2>Historique</h2><span></span></div>
+      <div class="history-date-row"><button id="historyPrev" type="button">‹</button><strong id="historyDateLabel">Aujourd’hui</strong><button id="historyNext" type="button">›</button></div>
+      <div id="historyMemberSwitch" class="segmented"></div>
+      <div id="historyStats" class="history-stats"></div>
+      <div id="historyTimeline" class="timeline-list"></div>
+    </section>
+
+    <section id="drivePanel" class="full-panel hidden" aria-label="Conduite">
+      <div class="full-panel-head"><h2>Au volant</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
+      <div class="panel-card"><div class="panel-kicker">RÉSUMÉ DE CONDUITE</div><h3 id="driveHeadline">Aucun trajet aujourd’hui</h3><p id="driveCopy">Les trajets détectés apparaîtront ici avec durée, distance, vitesse et événements de conduite.</p></div>
+      <div id="driveTrips" class="panel-list"></div>
+    </section>
+
+    <section id="safetyPanel" class="full-panel hidden" aria-label="Sécurité">
+      <div class="full-panel-head"><h2>Sécurité</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
+      <button id="safetySosCard" class="feature-card danger" type="button"><span class="feature-badge">SOS</span><span><strong>Alerte silencieuse</strong><small>Partage ta position avec ton cercle et tes contacts d’urgence.</small></span><b>›</b></button>
+      <button class="feature-card" type="button" id="crashCard"><span class="feature-badge">AUTO</span><span><strong>Détection d’accident</strong><small>Nécessite la future version native Android/iPhone pour fonctionner en permanence.</small></span><b>›</b></button>
+      <button class="feature-card" type="button" id="batteryCard"><span class="feature-badge">BAT</span><span><strong>Batterie des membres</strong><small id="batteryText">Disponible lorsqu’un appareil transmet son état.</small></span><b>›</b></button>
+    </section>
+
+    <section id="membershipPanel" class="full-panel hidden" aria-label="Abonnement">
+      <div class="full-panel-head"><h2>Nous Deux+</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
+      <div class="panel-card premium-card"><div class="panel-kicker">TOUTES LES FONCTIONS</div><h3>Protection et historique étendus</h3><p>Historique long, alertes de lieux illimitées, rapports de conduite et fonctions de sécurité avancées.</p></div>
+      <div class="feature-grid"><div><strong>30 jours</strong><span>Historique</span></div><div><strong>Illimité</strong><span>Alertes lieux</span></div><div><strong>Temps réel</strong><span>Localisation</span></div><div><strong>Privé</strong><span>Cercle</span></div></div>
+    </section>
+
+    <section id="settingsPanel" class="drawer hidden" aria-label="Réglages">
+      <div class="drawer-head"><button class="drawer-close" data-close-drawer type="button">×</button><h2>Réglages</h2><span></span></div>
+      <button class="settings-row" id="sharingSettingsRow" type="button"><span><strong>Partage de position</strong><small id="settingsShareStatus">Désactivé</small></span><b>›</b></button>
+      <button class="settings-row" id="notificationSettingsRow" type="button"><span><strong>Notifications</strong><small>Alertes d’arrivée, départ et sécurité</small></span><b>›</b></button>
+      <button class="settings-row" id="circleSettingsRow" type="button"><span><strong>Gestion du cercle</strong><small>Famille Ridau</small></span><b>›</b></button>
+      <a class="settings-row" href="index.html"><span><strong>Retour à Nous Deux</strong><small>Accueil principal</small></span><b>›</b></a>
+    </section>
+
+    <nav class="bottom-nav" aria-label="Navigation localisation">
+      <button class="nav-item active" id="navLocation" type="button"><span>⌖</span><strong>Localisation</strong></button>
+      <button class="nav-item" id="navDrive" type="button"><span>▣</span><strong>Au volant</strong></button>
+      <button class="nav-item" id="navSafety" type="button"><span>◇</span><strong>Sécurité</strong></button>
+      <button class="nav-item" id="navAccount" type="button"><span>☆</span><strong>Abonnement</strong></button>
+    </nav>
   </main>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script><script src="config.js"></script><script type="module" src="location.js?v=6"></script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="config.js"></script>
+  <script type="module" src="location.js?v=17"></script>
 </body>
 </html>
