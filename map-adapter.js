@@ -38,7 +38,7 @@
         attributionControl: true,
         pitchWithRotate: false,
         dragRotate: false,
-        maxPitch: 0,
+        maxPitch: 55,
         fadeDuration: 0
       });
       this.map.touchZoomRotate.disableRotation();
@@ -51,12 +51,27 @@
     }
     setView(latlng, zoom, options = {}) {
       const action = options.animate === false ? 'jumpTo' : 'easeTo';
-      this.map[action]({ center: toLngLat(latlng), zoom, duration: options.animate === false ? 0 : 550 });
+      this.map[action]({ center: toLngLat(latlng), zoom, bearing: 0, pitch: 0, duration: options.animate === false ? 0 : 550 });
+      return this;
+    }
+    followLocation(latlng, heading = null, speedMps = 0) {
+      const speed = Number(speedMps) || 0;
+      const moving = speed >= 2;
+      const bearing = Number.isFinite(Number(heading)) && Number(heading) >= 0 ? Number(heading) : this.map.getBearing();
+      this.map.easeTo({
+        center: toLngLat(latlng),
+        zoom: moving ? 17.2 : 16.2,
+        bearing: moving ? bearing : 0,
+        pitch: moving ? 46 : 0,
+        offset: moving ? [0, 105] : [0, 30],
+        duration: moving ? 850 : 550,
+        essential: true
+      });
       return this;
     }
     fitBounds(bounds, options = {}) {
       const b = bounds instanceof Bounds ? bounds.asMapLibre() : bounds;
-      this.map.fitBounds(b, { padding: { top: 120, right: 58, bottom: 330, left: 38 }, maxZoom: options.maxZoom || 16.5, duration: options.animate === false ? 0 : 650 });
+      this.map.fitBounds(b, { padding: { top: 120, right: 58, bottom: 330, left: 38 }, maxZoom: options.maxZoom || 16.5, duration: options.animate === false ? 0 : 650, bearing: 0, pitch: 0 });
       return this;
     }
     invalidateSize() { this.map.resize(); return this; }
