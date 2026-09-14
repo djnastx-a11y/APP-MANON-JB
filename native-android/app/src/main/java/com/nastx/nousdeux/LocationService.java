@@ -15,10 +15,12 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationRequest;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -36,6 +38,14 @@ import java.util.concurrent.Executors;
 
 public class LocationService extends Service implements LocationListener, SensorEventListener {
     static final String ACTION_START = "com.nastx.nousdeux.START_TRACKING";
+    static final String ACTION_LOCATION = "com.nastx.nousdeux.LOCATION_UPDATE";
+    static final String EXTRA_LATITUDE = "latitude";
+    static final String EXTRA_LONGITUDE = "longitude";
+    static final String EXTRA_ACCURACY = "accuracy";
+    static final String EXTRA_SPEED = "speed";
+    static final String EXTRA_BEARING = "bearing";
+    static final String EXTRA_TIME = "time";
+
     private static final String ACTION_CANCEL_CRASH = "com.nastx.nousdeux.CANCEL_CRASH";
     private static final String ACTION_SEND_CRASH = "com.nastx.nousdeux.SEND_CRASH";
     private static final String TAG = "NousDeuxTracking";
@@ -49,8 +59,11 @@ public class LocationService extends Service implements LocationListener, Sensor
     private LocationManager locationManager;
     private SensorManager sensorManager;
     private SecureStore store;
+    private PowerManager.WakeLock wakeLock;
     private Location lastLocation;
+    private Location lastUploadedLocation;
     private Location lastHistoryLocation;
+    private long lastUploadAt = 0L;
     private long lastHistoryAt = 0L;
     private long lastCrashAt = 0L;
     private Runnable pendingCrash;
@@ -60,6 +73,9 @@ public class LocationService extends Service implements LocationListener, Sensor
         store = new SecureStore(this);
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NousDeux:LiveLocation");
+        wakeLock.setReferenceCounted(false);
         createChannels();
     }
 
@@ -68,6 +84,7 @@ public class LocationService extends Service implements LocationListener, Sensor
         if (ACTION_CANCEL_CRASH.equals(action)) { cancelCrash(); return START_STICKY; }
         if (ACTION_SEND_CRASH.equals(action)) { sendCrashAlert(); return START_STICKY; }
         startForeground(TRACKING_NOTIFICATION, trackingNotification());
+        if (!wakeLock.isHeld()) wakeLock.acquire();
         startLocationUpdates();
         startImpactMonitor();
         return START_STICKY;
@@ -86,8 +103,8 @@ public class LocationService extends Service implements LocationListener, Sensor
         PendingIntent pi = PendingIntent.getActivity(this, 10, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, "tracking") : new Notification.Builder(this);
         return b.setSmallIcon(android.R.drawable.ic_menu_mylocation)
-                .setContentTitle("Nous Deux · Localisation active")
-                .setContentText(getString(com.nastx.nousdeux.R.string.tracking_notification))
+                .setContentTitle("Nous Deux · Localisation en direct")
+                .setContentText("Suivi GPS actif, y compris pendant tes déplacements.")
                 .setOngoing(true).setContentIntent(pi).setCategory(Notification.CATEGORY_SERVICE).build();
     }
 
@@ -96,11 +113,46 @@ public class LocationService extends Service implements LocationListener, Sensor
         boolean coarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         if (!fine && !coarse) { stopSelf(); return; }
         try {
-            if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 15000L, 10f, this, Looper.getMainLooper());
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER))
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 30000L, 25f, this, Looper.getMainLooper());
-        } catch (SecurityException e) { Log.e(TAG, "Location permission lost", e); stopSelf(); }
+            locationManager.removeUpdates(this);
+
+            Location cached = null;
+            if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                cached = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            }
+            if (cached == null && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                cached = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            }
+            if (cached != null && System.currentTimeMillis() - cached.getTime() < 120000L) onLocationChanged(cached);
+
+            if (Build.VERSION.SDK_INT >= 31) {
+                if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    LocationRequest gps = new LocationRequest.Builder(2000L)
+                            .setMinUpdateIntervalMillis(1000L)
+                            .setMinUpdateDistanceMeters(1f)
+                            .setQuality(LocationRequest.QUALITY_HIGH_ACCURACY)
+                            .setMaxUpdateDelayMillis(0L)
+                            .build();
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, gps, getMainExecutor(), this);
+                }
+                if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    LocationRequest networkRequest = new LocationRequest.Builder(5000L)
+                            .setMinUpdateIntervalMillis(2500L)
+                            .setMinUpdateDistanceMeters(3f)
+                            .setQuality(LocationRequest.QUALITY_BALANCED_POWER_ACCURACY)
+                            .setMaxUpdateDelayMillis(0L)
+                            .build();
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, networkRequest, getMainExecutor(), this);
+                }
+            } else {
+                if (fine && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 1f, this, Looper.getMainLooper());
+                if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER))
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 3f, this, Looper.getMainLooper());
+            }
+        } catch (SecurityException e) {
+            Log.e(TAG, "Location permission lost", e);
+            stopSelf();
+        }
     }
 
     private void startImpactMonitor() {
@@ -108,13 +160,54 @@ public class LocationService extends Service implements LocationListener, Sensor
         if (accelerometer != null) sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
+    private boolean shouldAccept(Location location) {
+        if (location == null) return false;
+        if (lastLocation == null) return true;
+        long delta = location.getTime() - lastLocation.getTime();
+        if (delta < -5000L) return false;
+        if (location.hasAccuracy() && location.getAccuracy() > 150f && lastLocation.hasAccuracy()
+                && lastLocation.getAccuracy() < location.getAccuracy() && delta < 15000L) return false;
+        return true;
+    }
+
     @Override public void onLocationChanged(Location location) {
-        lastLocation = location;
+        if (!shouldAccept(location)) return;
+        lastLocation = new Location(location);
+        broadcastLocation(location);
         network.execute(() -> uploadLocation(location));
     }
 
+    private void broadcastLocation(Location location) {
+        Intent update = new Intent(ACTION_LOCATION).setPackage(getPackageName());
+        update.putExtra(EXTRA_LATITUDE, location.getLatitude());
+        update.putExtra(EXTRA_LONGITUDE, location.getLongitude());
+        update.putExtra(EXTRA_ACCURACY, location.hasAccuracy() ? location.getAccuracy() : -1f);
+        update.putExtra(EXTRA_SPEED, location.hasSpeed() ? location.getSpeed() : -1f);
+        update.putExtra(EXTRA_BEARING, location.hasBearing() ? location.getBearing() : -1f);
+        update.putExtra(EXTRA_TIME, location.getTime());
+        sendBroadcast(update);
+    }
+
+    private float estimatedSpeed(Location location) {
+        if (location.hasSpeed() && location.getSpeed() >= 0f) return location.getSpeed();
+        if (lastUploadedLocation == null) return 0f;
+        long dt = Math.max(1L, location.getTime() - lastUploadedLocation.getTime());
+        return lastUploadedLocation.distanceTo(location) / (dt / 1000f);
+    }
+
+    private boolean shouldUploadCurrent(Location location) {
+        long now = System.currentTimeMillis();
+        float speed = estimatedSpeed(location);
+        boolean moving = speed >= 1.5f;
+        long minInterval = moving ? 1800L : 8000L;
+        float minDistance = moving ? 2f : 8f;
+        if (lastUploadedLocation == null) return true;
+        if (now - lastUploadAt >= minInterval) return true;
+        return lastUploadedLocation.distanceTo(location) >= minDistance;
+    }
+
     private void uploadLocation(Location location) {
-        if (!store.isEnabled()) return;
+        if (!store.isEnabled() || !shouldUploadCurrent(location)) return;
         try {
             String token = validAccessToken();
             if (token == null) return;
@@ -122,9 +215,18 @@ public class LocationService extends Service implements LocationListener, Sensor
             int currentCode = request("POST", SUPABASE + "/rest/v1/current_locations?on_conflict=user_id", token, row.toString(), "resolution=merge-duplicates,return=minimal");
             if (currentCode == 401) {
                 token = refreshAccessToken();
-                if (token != null) request("POST", SUPABASE + "/rest/v1/current_locations?on_conflict=user_id", token, row.toString(), "resolution=merge-duplicates,return=minimal");
+                if (token != null) currentCode = request("POST", SUPABASE + "/rest/v1/current_locations?on_conflict=user_id", token, row.toString(), "resolution=merge-duplicates,return=minimal");
             }
-            boolean saveHistory = lastHistoryLocation == null || System.currentTimeMillis() - lastHistoryAt >= 60000L || lastHistoryLocation.distanceTo(location) >= 50f;
+            if (currentCode >= 200 && currentCode < 300) {
+                lastUploadAt = System.currentTimeMillis();
+                lastUploadedLocation = new Location(location);
+            }
+
+            float speed = estimatedSpeed(location);
+            boolean driving = speed >= 2.5f;
+            long historyInterval = driving ? 10000L : 60000L;
+            float historyDistance = driving ? 20f : 40f;
+            boolean saveHistory = lastHistoryLocation == null || System.currentTimeMillis() - lastHistoryAt >= historyInterval || lastHistoryLocation.distanceTo(location) >= historyDistance;
             if (saveHistory && token != null) {
                 request("POST", SUPABASE + "/rest/v1/location_history", token, locationJson(location, false).toString(), "return=minimal");
                 lastHistoryAt = System.currentTimeMillis();
@@ -142,7 +244,7 @@ public class LocationService extends Service implements LocationListener, Sensor
         row.put("altitude_m", location.hasAltitude() ? location.getAltitude() : JSONObject.NULL);
         row.put("speed_mps", location.hasSpeed() ? location.getSpeed() : JSONObject.NULL);
         row.put("heading_deg", location.hasBearing() ? location.getBearing() : JSONObject.NULL);
-        row.put("source", "android_native");
+        row.put("source", "android_native_live");
         row.put("captured_at", Instant.ofEpochMilli(location.getTime()).toString());
         if (current) row.put("received_at", Instant.now().toString());
         return row;
@@ -191,8 +293,8 @@ public class LocationService extends Service implements LocationListener, Sensor
     private HttpURLConnection open(String method, String url, String token, String prefer) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setRequestMethod(method);
-        c.setConnectTimeout(15000);
-        c.setReadTimeout(15000);
+        c.setConnectTimeout(10000);
+        c.setReadTimeout(10000);
         c.setRequestProperty("apikey", API_KEY);
         c.setRequestProperty("Content-Type", "application/json");
         if (token != null) c.setRequestProperty("Authorization", "Bearer " + token);
@@ -275,6 +377,7 @@ public class LocationService extends Service implements LocationListener, Sensor
     @Override public void onDestroy() {
         try { locationManager.removeUpdates(this); } catch (Exception ignored) { }
         try { sensorManager.unregisterListener(this); } catch (Exception ignored) { }
+        try { if (wakeLock != null && wakeLock.isHeld()) wakeLock.release(); } catch (Exception ignored) { }
         cancelCrash();
         network.shutdownNow();
         super.onDestroy();
