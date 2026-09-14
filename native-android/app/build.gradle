@@ -8,13 +8,26 @@ android {
         applicationId 'com.nastx.nousdeux'
         minSdk 26
         targetSdk 36
-        versionCode 2
-        versionName '1.1.0'
+        versionCode 3
+        versionName '1.1.1'
+    }
+
+    signingConfigs {
+        devStable {
+            storeFile file('nous-deux-dev.keystore')
+            storePassword 'nousdeux-dev-2026'
+            keyAlias 'nousdeux-dev'
+            keyPassword 'nousdeux-dev-2026'
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.devStable
+        }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.devStable
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
