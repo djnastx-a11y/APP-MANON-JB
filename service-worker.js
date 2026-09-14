@@ -1,5 +1,5 @@
-const CACHE="nous-deux-v17";
-const ASSETS=["./","./index.html","./app.css?v=14","./app.js?v=14","./manifest.json","./icon.svg","./config.js","./location.html","./location.css?v=17","./location.js?v=17"];
+const CACHE="nous-deux-v18";
+const ASSETS=["./","./index.html","./app.css?v=14","./app.js?v=14","./manifest.json","./icon.svg","./config.js","./location.html","./location.css?v=18","./native-bridge.js?v=2","./location.js?v=18"];
 
 self.addEventListener("install",event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
