@@ -8,9 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>Localisation · Nous Deux</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="leaflet-fallback.css?v=1" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="location.css?v=19" />
+  <link rel="stylesheet" href="location-v21.css?v=1" />
 </head>
 <body>
   <main class="life-screen">
@@ -26,8 +26,8 @@
 
     <aside class="map-tools">
       <button id="centerOnMeBtn" class="map-tool" type="button" aria-label="Recentrer sur moi">◎</button>
-      <button id="fitBothBtn" class="map-tool" type="button" aria-label="Voir tout le monde">⌖</button>
-      <button id="layersBtn" class="map-tool" type="button" aria-label="Changer de carte">▱</button>
+      <button id="fitBothBtn" class="map-tool" type="button" aria-label="Voir le cercle">⌖</button>
+      <button id="layersBtn" class="map-tool" type="button" aria-label="Changer le style de carte">▱</button>
     </aside>
 
     <div id="locationMessage" class="toast" role="status" aria-live="polite"></div>
@@ -50,7 +50,7 @@
           <strong id="sheetTitle">Famille Ridau</strong>
           <span id="sheetSubtitle">2 membres</span>
         </div>
-        <label class="share-control">
+        <label class="share-control" aria-label="Partage de position">
           <input id="sharingToggle" type="checkbox" />
           <span></span>
           <small id="shareLabel">Partage désactivé</small>
@@ -80,23 +80,24 @@
       <div id="historyTimeline" class="timeline-list"></div>
     </section>
 
-    <section id="drivePanel" class="full-panel hidden" aria-label="Conduite">
-      <div class="full-panel-head"><h2>Au volant</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
-      <div class="panel-card"><div class="panel-kicker">RÉSUMÉ DE CONDUITE</div><h3 id="driveHeadline">Aucun trajet aujourd’hui</h3><p id="driveCopy">Les trajets détectés apparaîtront ici avec durée, distance, vitesse et événements de conduite.</p></div>
+    <section id="drivePanel" class="full-panel hidden" aria-label="Trajets">
+      <div class="full-panel-head"><h2>Trajets</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
+      <div class="panel-card"><div class="panel-kicker">AUJOURD’HUI</div><h3 id="driveHeadline">Aucun trajet aujourd’hui</h3><p id="driveCopy">Les trajets détectés apparaîtront ici avec durée, distance et vitesse.</p></div>
       <div id="driveTrips" class="panel-list"></div>
     </section>
 
     <section id="safetyPanel" class="full-panel hidden" aria-label="Sécurité">
       <div class="full-panel-head"><h2>Sécurité</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
-      <button id="safetySosCard" class="feature-card danger" type="button"><span class="feature-badge">SOS</span><span><strong>Alerte silencieuse</strong><small>Partage ta position avec ton cercle et tes contacts d’urgence.</small></span><b>›</b></button>
-      <button class="feature-card" type="button" id="crashCard"><span class="feature-badge">AUTO</span><span><strong>Détection d’accident</strong><small>Sur Android natif, un impact important déclenche un délai de sécurité avant l’alerte au cercle.</small></span><b>›</b></button>
-      <button class="feature-card" type="button" id="batteryCard"><span class="feature-badge">BAT</span><span><strong>Batterie des membres</strong><small id="batteryText">Disponible lorsqu’un appareil transmet son état.</small></span><b>›</b></button>
+      <button id="safetySosCard" class="feature-card danger" type="button"><span class="feature-badge">SOS</span><span><strong>Alerte SOS</strong><small>Partage ta position avec ton cercle et tes contacts d’urgence.</small></span><b>›</b></button>
+      <button class="feature-card" type="button" id="crashCard"><span class="feature-badge">AUTO</span><span><strong>Détection d’accident</strong><small>Sur Android natif, un impact important déclenche un délai de sécurité avant l’alerte.</small></span><b>›</b></button>
+      <button class="feature-card" type="button" id="batteryCard"><span class="feature-badge">BAT</span><span><strong>Batterie</strong><small id="batteryText">État de la batterie de ce téléphone.</small></span><b>›</b></button>
     </section>
 
-    <section id="membershipPanel" class="full-panel hidden" aria-label="Abonnement">
-      <div class="full-panel-head"><h2>Nous Deux+</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
-      <div class="panel-card premium-card"><div class="panel-kicker">TOUTES LES FONCTIONS</div><h3>Protection et historique étendus</h3><p>Historique long, alertes de lieux illimitées, rapports de conduite et fonctions de sécurité avancées.</p></div>
-      <div class="feature-grid"><div><strong>30 jours</strong><span>Historique</span></div><div><strong>Illimité</strong><span>Alertes lieux</span></div><div><strong>Temps réel</strong><span>Localisation</span></div><div><strong>Privé</strong><span>Cercle</span></div></div>
+    <section id="membershipPanel" class="full-panel hidden" aria-label="Profil">
+      <div class="full-panel-head"><h2>Profil</h2><button class="panel-back" data-back-location type="button">Carte</button></div>
+      <div class="panel-card"><div class="panel-kicker">CERCLE</div><h3>Famille Ridau</h3><p>2 membres. Cercle privé.</p></div>
+      <button class="feature-card" type="button" id="profileSharingCard"><span class="feature-badge">GPS</span><span><strong>Localisation en direct</strong><small id="nativeProfileShare">État du partage sur ce téléphone.</small></span><b>›</b></button>
+      <button class="feature-card" type="button" id="profileSettingsCard"><span class="feature-badge">CFG</span><span><strong>Réglages</strong><small>Notifications, cercle et permissions.</small></span><b>›</b></button>
     </section>
 
     <section id="settingsPanel" class="drawer hidden" aria-label="Réglages">
@@ -108,16 +109,17 @@
     </section>
 
     <nav class="bottom-nav" aria-label="Navigation localisation">
-      <button class="nav-item active" id="navLocation" type="button"><span>⌖</span><strong>Localisation</strong></button>
-      <button class="nav-item" id="navDrive" type="button"><span>▣</span><strong>Au volant</strong></button>
+      <button class="nav-item active" id="navLocation" type="button"><span>⌖</span><strong>Carte</strong></button>
+      <button class="nav-item" id="navDrive" type="button"><span>▣</span><strong>Trajets</strong></button>
       <button class="nav-item" id="navSafety" type="button"><span>◇</span><strong>Sécurité</strong></button>
-      <button class="nav-item" id="navAccount" type="button"><span>☆</span><strong>Abonnement</strong></button>
+      <button class="nav-item" id="navAccount" type="button"><span>●</span><strong>Profil</strong></button>
     </nav>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <script src="map-adapter.js?v=1"></script>
   <script src="config.js"></script>
-  <script src="native-bridge.js?v=3"></script>
-  <script type="module" src="location.js?v=19"></script>
+  <script src="native-bridge.js?v=4"></script>
+  <script type="module" src="location.js?v=21"></script>
 </body>
 </html>
