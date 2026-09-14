@@ -1,5 +1,5 @@
-const CACHE="nous-deux-v21";
-const ASSETS=["./","./index.html","./app.css?v=14","./app.js?v=14","./manifest.json","./icon.svg","./config.js","./location.html","./location.css?v=19","./location-v21.css?v=1","./map-adapter.js?v=1","./native-bridge.js?v=4","./location.js?v=21"];
+const CACHE="nous-deux-v22";
+const ASSETS=["./","./index.html","./app.css?v=14","./app.js?v=14","./manifest.json","./icon.svg","./config.js","./location.html","./location.css?v=19","./location-v21.css?v=1","./map-adapter.js?v=2","./native-bridge.js?v=5","./location.js?v=21"];
 
 self.addEventListener("install",event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
