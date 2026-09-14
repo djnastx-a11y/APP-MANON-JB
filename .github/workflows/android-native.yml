@@ -36,9 +36,13 @@ jobs:
       - name: Build signed debug APK
         working-directory: native-android
         run: gradle :app:assembleDebug --stacktrace --no-daemon
+      - name: Verify APK signature
+        run: $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose --print-certs native-android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify APK package metadata
+        run: $ANDROID_HOME/build-tools/36.0.0/aapt dump badging native-android/app/build/outputs/apk/debug/app-debug.apk | tee /tmp/apk-badging.txt && grep -q "package: name='com.nastx.nousdeux.live'" /tmp/apk-badging.txt
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: nous-deux-android-debug
+          name: nous-deux-android-clean-install
           path: native-android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
