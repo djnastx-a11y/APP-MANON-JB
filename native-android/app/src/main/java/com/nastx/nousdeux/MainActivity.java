@@ -36,8 +36,7 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                boolean granted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-                callback.invoke(origin, granted, false);
+                callback.invoke(origin, hasLocationPermission(), false);
             }
         });
         webView.loadUrl("https://djnastx-a11y.github.io/APP-MANON-JB/location.html?native=android");
@@ -47,14 +46,19 @@ public class MainActivity extends Activity {
         if (webView.canGoBack()) webView.goBack(); else super.onBackPressed();
     }
 
+    private boolean hasLocationPermission() {
+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private void requestStart(PendingStart start) {
         pendingStart = start;
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
-        }
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (!hasLocationPermission()) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, REQ_LOCATION);
             return;
+        }
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
         }
         startNativeTracking(start);
     }
@@ -87,8 +91,10 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_LOCATION && pendingStart != null) {
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                    checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            if (hasLocationPermission()) {
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
+                }
                 startNativeTracking(pendingStart);
             } else {
                 Toast.makeText(this, "La localisation est nécessaire au suivi en direct.", Toast.LENGTH_LONG).show();
@@ -117,7 +123,10 @@ public class MainActivity extends Activity {
         final String accessToken, refreshToken, userId;
         final long expiresAtMs;
         PendingStart(String accessToken, String refreshToken, String userId, long expiresAtMs) {
-            this.accessToken = accessToken; this.refreshToken = refreshToken; this.userId = userId; this.expiresAtMs = expiresAtMs;
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
+            this.userId = userId;
+            this.expiresAtMs = expiresAtMs;
         }
     }
 }
