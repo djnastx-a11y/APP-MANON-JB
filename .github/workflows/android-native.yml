@@ -31,7 +31,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Build debug APK
+      - name: Restore stable Android signing key
+        run: base64 -d native-android/app/nous-deux-dev.keystore.b64 > native-android/app/nous-deux-dev.keystore
+      - name: Build signed debug APK
         working-directory: native-android
         run: gradle :app:assembleDebug --stacktrace --no-daemon
       - name: Upload APK
