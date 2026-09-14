@@ -5,10 +5,12 @@
   if (window.L?.tileLayer) {
     const originalTileLayer = window.L.tileLayer.bind(window.L);
     window.L.tileLayer = (url, options = {}) => {
-      const safeUrl = String(url).includes("cartocdn.com")
-        ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        : url;
-      return originalTileLayer(safeUrl, options);
+      const isCarto = String(url).includes("cartocdn.com");
+      const safeUrl = isCarto
+        ? "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : String(url).replace("https://{s}.tile.openstreetmap.org", "https://tile.openstreetmap.org");
+      const safeOptions = isCarto ? { ...options, subdomains: undefined, maxZoom: 19 } : { ...options, subdomains: undefined };
+      return originalTileLayer(safeUrl, safeOptions);
     };
   }
 
