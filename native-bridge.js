@@ -21,6 +21,7 @@
     .native-onboarding-icon{width:48px;height:48px;border-radius:15px;background:#f0ecff;color:#7a5af8;display:grid;place-items:center;font-size:25px;margin-bottom:12px}
     .native-onboarding-card h2{margin:0 0 7px;font-size:20px;color:#292330}.native-onboarding-card p{margin:0 0 15px;color:#777080;font-size:13px;line-height:1.45}
     .native-onboarding-card button{width:100%;height:50px;border:0;border-radius:16px;background:#7a5af8;color:#fff;font-weight:800;font-size:14px}.native-onboarding-card small{display:block;text-align:center;color:#918a99;margin-top:9px;font-size:10px}
+    body.native-live-map .person-pin:not(.partner){opacity:0!important;pointer-events:none!important}
   `;
   document.head.appendChild(style);
 
@@ -111,6 +112,19 @@
     setTimeout(() => node.classList.remove('show'), 2600);
   }
 
+  function driveMapWith(row) {
+    const vectorMap = window.__nousDeuxVectorMap;
+    if (!vectorMap || !row) return;
+    const latlng = [Number(row.latitude), Number(row.longitude)];
+    const heading = Number(row.heading_deg);
+    const speed = Number(row.speed_mps) || 0;
+    document.body.classList.add('native-live-map');
+    try { vectorMap.showLiveUser?.(latlng, heading, speed); } catch {}
+    if (speed >= 1.5) {
+      try { vectorMap.followLocation?.(latlng, heading, speed); } catch {}
+    }
+  }
+
   function applyNativeDetail(detail) {
     if (!detail) return;
     if (!session?.user?.id) {
@@ -134,6 +148,7 @@
     const index = rows.findIndex(item => item.user_id === row.user_id);
     if (index >= 0) rows[index] = row;
     else rows.unshift(row);
+    driveMapWith(row);
     fakeWatches.forEach(watch => emitWatch(watch, row));
     window.dispatchEvent(new CustomEvent('nousdeux:nativeRow', { detail: row }));
   }
@@ -189,6 +204,7 @@
   async function stopNative() {
     try { await savePreference(false); } catch {}
     try { window.NativeTracking.stop(); } catch {}
+    document.body.classList.remove('native-live-map');
     setUi(false);
     toast('Partage de position arrêté.');
   }
